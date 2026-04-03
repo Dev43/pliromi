@@ -7,6 +7,7 @@ import WalletBalances from "@/components/WalletBalances";
 import Inventory from "@/components/Inventory";
 import TreasuryPieChart from "@/components/TreasuryPieChart";
 import ActivityLog from "@/components/ActivityLog";
+import SalesChart from "@/components/SalesChart";
 
 interface OrgData {
   name: string;
@@ -64,8 +65,9 @@ export default function DashboardPage() {
           <TreasuryPieChart />
         </div>
 
-        {/* Col 4: Activity */}
+        {/* Col 4: Sales + Activity */}
         <div className="lg:col-span-1 space-y-5">
+          <SalesChart />
           <ActivityLog />
         </div>
       </div>

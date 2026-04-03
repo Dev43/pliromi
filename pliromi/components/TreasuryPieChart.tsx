@@ -157,7 +157,18 @@ export default function TreasuryPieChart() {
   if (loading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Allocation</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-900">Allocation</h2>
+          <button
+            onClick={() => { setLoading(true); fetchData(); }}
+            className="p-1.5 text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+            title="Refresh allocation"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.31H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.535a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.395a.75.75 0 001.45.39z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
         <div className="text-center text-gray-400 py-6 text-sm">Loading...</div>
       </div>
     );
@@ -166,7 +177,18 @@ export default function TreasuryPieChart() {
   if (slices.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Allocation</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-900">Allocation</h2>
+          <button
+            onClick={() => { setLoading(true); fetchData(); }}
+            className="p-1.5 text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+            title="Refresh allocation"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.31H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.535a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.395a.75.75 0 001.45.39z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
         <div className="text-center text-gray-400 py-6 text-sm">No USDC balances found</div>
       </div>
     );

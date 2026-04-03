@@ -129,33 +129,52 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
+// Cache last known good Solana balances
+let lastSolanaBalances: { native: string; usdc: string } | null = null;
+
+const SOLANA_RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-mainnet.g.alchemy.com/v2/demo",
+];
+
 async function fetchSolanaBalances(address: string): Promise<{ native: string; usdc: string }> {
   const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-  const rpc = "https://api.mainnet-beta.solana.com";
 
-  const [solBalData, tokenData] = await Promise.all([
-    fetch(rpc, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [address] }),
-    }).then((r) => r.json()),
-    fetch(rpc, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner",
-        params: [address, { mint: USDC_MINT }, { encoding: "jsonParsed" }],
-      }),
-    }).then((r) => r.json()),
-  ]);
+  for (const rpc of SOLANA_RPCS) {
+    try {
+      const [solBalData, tokenData] = await Promise.all([
+        fetch(rpc, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [address] }),
+        }).then((r) => r.json()),
+        fetch(rpc, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner",
+            params: [address, { mint: USDC_MINT }, { encoding: "jsonParsed" }],
+          }),
+        }).then((r) => r.json()),
+      ]);
 
-  const native = (Number(solBalData?.result?.value || 0) / 1e9).toFixed(4);
-  const tokenAccounts = tokenData?.result?.value || [];
-  const usdc = tokenAccounts.length > 0
-    ? (tokenAccounts[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0).toFixed(2)
-    : "0";
+      if (solBalData?.result === undefined && tokenData?.result === undefined) continue;
 
-  return { native, usdc };
+      const native = (Number(solBalData?.result?.value || 0) / 1e9).toFixed(4);
+      const tokenAccounts = tokenData?.result?.value || [];
+      const usdc = tokenAccounts.length > 0
+        ? (tokenAccounts[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0).toFixed(2)
+        : "0";
+
+      lastSolanaBalances = { native, usdc };
+      return { native, usdc };
+    } catch {
+      continue;
+    }
+  }
+
+  // All RPCs failed — return last known good or zeros
+  return lastSolanaBalances || { native: "0", usdc: "0" };
 }
 
 export async function getBalances(): Promise<WalletAccount[]> {
