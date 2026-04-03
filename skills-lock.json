@@ -35,6 +35,11 @@
       "source": "moonpay/skills",
       "sourceType": "github",
       "computedHash": "3fe68736a36b968dd227e883fd5f1267723da28db5ffef7ae61e727870771eee"
+    },
+    "moonpay-x402": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "7093f5ee0988bae257c0a1eab849f20205b88ce033f6bde51f13701dd4c2a6b7"
     }
   }
 }
