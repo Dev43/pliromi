@@ -78,10 +78,10 @@
 - [x] WebMCP server at /api/mcp (list_products, get_product, buy_product, confirm_purchase, negotiate_price)
 
 ## Laso Finance Debit Card
-- [ ] Page to create prepaid debit cards
-- [ ] x402 payment for card creation
-- [ ] Store card details securely
-- [ ] Multiple cards per agent/human
+- [x] Page to create prepaid debit cards
+- [x] x402 payment for card creation
+- [x] Store card details securely
+- [x] Multiple cards per agent/human
 
 ## Stretch Goals
 - [ ] MoonPay commerce Shopify browsing
@@ -102,10 +102,3 @@
 7. ~~Fund page: `ows fund deposit` integration~~ DONE
 8. ~~Product detail page with haggling chat~~ DONE
 9. ~~Solana balance fetching~~ DONE
-
-### REMAINING (low priority)
-- Laso debit cards
-- MoonPay bridging in treasurer
-- XMTP add members by address
-- Org people count in onboarding
-- Policy update for existing members
