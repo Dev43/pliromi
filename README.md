@@ -4,7 +4,10 @@
 
 > *Pliromi* (Greek: payment) is a full-stack store and treasury management system where AI agents and humans collaborate to run a business — managing multi-chain wallets, selling products, haggling prices, farming yield, and accepting crypto payments — all built on [OWS](https://openwallet.sh), [x402](https://www.x402.org/), [XMTP](https://xmtp.org), [MoonPay](https://moonpay.com), and [Lulo Finance](https://lulo.fi).
 
+![Pliromi landing page — AI-powered store and treasury management](Splash.png)
+
 ---
+
 
 ## The Problem
 
@@ -19,6 +22,7 @@ Pliromi brings everything together:
 - **Pay with a URL** — x402 protocol turns every product into a payable endpoint
 - **Any agent can shop here** — The store is a WebMCP server that browser AI agents and CLI tools can interact with directly
 - **Team coordination** — XMTP group chat keeps humans and agents in sync with policy-governed spending limits
+- **On/off ramp and bridging/swap** - Moonpay does it all using their CLI. Fast, easy and safely
 
 ---
 
@@ -170,12 +174,20 @@ npm run dev
 ## Demo Flow
 
 1. **Create org** → "My Store" with Treasurer (moderate policy) + Seller (conservative policy)
+![Create org](create_org.png)
+
+
 2. **Add product** → "Widget" priced $1–$5 USDC, qty 10
 3. **Fund treasury** → Use MoonPay deposit to get USDC on Base
+![Fund treasury](fund_treasury.png)
+
 4. **Customer visits store** → Chats with seller: "Can I get the Widget for $2?"
 5. **Seller negotiates** → "How about $3?" → Customer: "$2.50?" → "Deal! Here's your payment link"
+![Store](store.png)
 6. **Payment** → Customer pays $2.50 USDC via x402 on Base
 7. **Treasurer runs** → Sees $2.50 income, deposits 1% to Lulo yield on Solana
+![Dashboard](dashboard.png)
+
 8. **AI agent shops** → Another Claude instance discovers the store via WebMCP, lists products, negotiates, and pays via `ows pay request`
 
 ---
@@ -221,3 +233,10 @@ pliromi/
 ## License
 
 Built for the [OWS Hackathon](https://hackathon.openwallet.sh).
+
+
+Demos: 
+
+![Hype](hype_video.mp4)
+
+![Main Video](Plimori_ The AI-Powered Business Operating System for Seamless Management.mp4)
