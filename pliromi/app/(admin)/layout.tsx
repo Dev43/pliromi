@@ -31,11 +31,10 @@ export default function AdminLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    pathname === item.href
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${pathname === item.href
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
                 >
                   {item.label}
                 </Link>
@@ -51,6 +50,22 @@ export default function AdminLayout({
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm py-3">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+          <span>Powered by</span>
+          <a href="https://openwallet.sh" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
+            <img src="/ows-logo.svg" alt="OWS" className="h-5 inline-block" />
+          </a>
+          <span className="text-gray-300">·</span>
+          <a href="https://xmtp.org" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
+            <img src="/xmtp_logo.png" alt="XMTP" className="h-5 inline-block" />
+          </a>
+          <span className="text-gray-300">·</span>
+          <a href="https://moonpay.com" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
+            <img src="/moonpay_logo.png" alt="MoonPay" className="h-5 inline-block" />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

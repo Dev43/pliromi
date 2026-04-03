@@ -1,0 +1,47 @@
+[
+  {
+    "id": "3eb46aef-a29a-4a90-b202-7a1681d8c3e1",
+    "assignedTo": "Rick",
+    "amount": 5,
+    "cardNumber": "Pending",
+    "expiry": "Pending",
+    "cvv": "Pending",
+    "status": "active",
+    "createdAt": "2026-04-03T19:38:00.606Z",
+    "rawResponse": {
+      "auth": {
+        "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjM3MzAwNzY5YTA3ZTA1MTE2ZjdlNTEzOGZhOTA5MzY4NWVlYmMyNDAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20va3ljLXRzIiwiYXVkIjoia3ljLXRzIiwiYXV0aF90aW1lIjoxNzc1MjQ1MDc5LCJ1c2VyX2lkIjoiMHg3OTNkZDExOGIwZjhmMjJjZmU1MmVkOGExNTJkNDY3N2NmYjU3MWQzIiwic3ViIjoiMHg3OTNkZDExOGIwZjhmMjJjZmU1MmVkOGExNTJkNDY3N2NmYjU3MWQzIiwiaWF0IjoxNzc1MjQ1MDc5LCJleHAiOjE3NzUyNDg2NzksImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnt9LCJzaWduX2luX3Byb3ZpZGVyIjoiY3VzdG9tIn19.T6NCyl15b7AtkF9tqSJaEmVCRbxpx-0Nr0GwIh1l4OeuBjtSRNBSRSQBx2bxeMCTNukKRHe3ngTdZGzbcgL6eHUTotbcdIQD_wDaLDiA5qRGFLTkJWE8REqF5waIDaXaLBMsLGsAFOUtU-v3wZ_bCUBMeOt_FRsGTUIMIwp6YXyw_jgQkGBvv5NMNw9cK065Wz0b6WYURr2ODBJjqKSYvIeJ1ErDhNbHd6JxZAgGo42h9E3cVcyqH_-OsxF8248HG2A53-frEdE9t1K6xqbdzhInAK20TOYfCo8RCmQew4RdhqV55uA9JpW9x4wupDKbgRBGjpWi9ggMbzvo3Pu9ag",
+        "refresh_token": "AMf-vBzBSgrUNRpXjoFXD9EAlFSsxTVKssnkX_K7eqZZo86kiuxZw7esKtHTPzsZLrELxQIB2lIU2HdTG9j0B5L4jdl8_00MoEfZ6a39ETRTvzjZeW9T8ctvYqeYnZw_s89Aid1n3ivHn07Aomz2vWoGXH82dd2OA401rhWnNB99dr9KH9GSy8c",
+        "expires_in": "3600"
+      },
+      "callable_base_url": "https://us-central1-kyc-ts.cloudfunctions.net",
+      "user_id": "0x793dd118b0f8f22cfe52ed8a152d4677cfb571d3",
+      "card": {
+        "card_id": "O-01KNADMC0QSDSDYFAZRW1PN8M9",
+        "usd_amount": 5,
+        "country": "US",
+        "timestamp": 1775245079480,
+        "timestamp_readable": "4/3/2026, 2:37:59 PM",
+        "status": "pending"
+      }
+    }
+  },
+  {
+    "id": "99765708-7be1-4f8b-8800-52f2bfb807d4",
+    "assignedTo": "Seller",
+    "amount": 5,
+    "cardNumber": "4*** **** **** 3903",
+    "expiry": "02/28",
+    "cvv": "560",
+    "status": "active",
+    "createdAt": "2026-04-03T20:15:11.485Z",
+    "rawResponse": {
+      "note": "Stubbed for demo — real x402 Laso integration is commented out above",
+      "card": {
+        "card_id": "demo-99765708",
+        "usd_amount": 5,
+        "status": "active"
+      }
+    }
+  }
+]

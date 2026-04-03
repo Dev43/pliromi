@@ -264,9 +264,23 @@ export default function StorePage() {
       {loading ? (
         <div className="text-center text-gray-400 py-12">Loading products...</div>
       ) : products.length === 0 ? (
-        <div className="text-center text-gray-400 py-16">
-          <p className="text-lg mb-2">No products available</p>
-          <p className="text-sm">Check back soon or contact the store admin.</p>
+        <div className="text-center py-24 px-6">
+          <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-emerald-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">No products yet</h2>
+          <p className="text-gray-400 max-w-sm mx-auto mb-6">
+            The store is getting stocked up. Check back soon or chat with our assistant for updates.
+          </p>
+          <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-medium">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Powered by x402
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

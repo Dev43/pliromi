@@ -156,10 +156,37 @@ export default function Inventory() {
       )}
 
       {loading ? (
-        <div className="text-center text-gray-400 py-4">Loading...</div>
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-gray-50 rounded-lg p-3 border border-gray-100">
+              <div className="flex items-start gap-2.5">
+                <div className="w-10 h-10 rounded bg-gray-200 shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 bg-gray-200 rounded w-28" />
+                  <div className="h-2.5 bg-gray-100 rounded w-40" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mt-2 ml-[50px]">
+                <div className="h-2.5 bg-gray-200 rounded w-12" />
+                <div className="h-2.5 bg-gray-100 rounded w-16" />
+                <div className="h-2.5 bg-gray-100 rounded w-10" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <div className="text-center text-gray-400 py-8 text-sm">
-          No products yet. Add your first item!
+        <div className="text-center py-10">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto text-gray-300 mb-3">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+          </svg>
+          <p className="text-sm font-medium text-gray-500 mb-1">No products yet</p>
+          <p className="text-xs text-gray-400 mb-3">Add your first product to start selling</p>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1 text-sm px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors"
+          >
+            + Add Your First Product
+          </button>
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">

@@ -675,7 +675,28 @@ export default function WalletBalances() {
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-8">Loading balances...</div>
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse rounded-xl p-3 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-200" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="h-3.5 bg-gray-200 rounded w-20" />
+                    <div className="h-3 bg-gray-100 rounded w-10" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2.5 bg-gray-100 rounded w-24" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-2 ml-11">
+                <div className="h-2.5 bg-gray-200 rounded w-16" />
+                <div className="h-2.5 bg-gray-100 rounded w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="space-y-2 max-h-[420px] overflow-y-auto">
           {accounts.map((acc, idx) => {

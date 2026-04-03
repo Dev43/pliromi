@@ -73,10 +73,27 @@ export default function ActivityLog() {
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-4">Loading...</div>
+        <div className="space-y-1.5">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-gray-50 rounded p-2 border border-gray-100">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-3 bg-gray-200 rounded w-16" />
+                <div className="h-2.5 bg-gray-100 rounded w-14" />
+              </div>
+              <div className="space-y-1">
+                <div className="h-2.5 bg-gray-100 rounded w-full" />
+                <div className="h-2.5 bg-gray-100 rounded w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : logs.length === 0 ? (
-        <div className="text-center text-gray-400 py-8 text-sm">
-          No agent activity yet. Run the treasurer to see logs.
+        <div className="text-center py-10">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 mx-auto text-gray-300 mb-3">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h9a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 15.75 4.5h-9A2.25 2.25 0 0 0 4.5 6.75v10.5A2.25 2.25 0 0 0 6.75 19.5Zm.75-12h7.5v7.5h-7.5V7.5Z" />
+          </svg>
+          <p className="text-sm font-medium text-gray-500 mb-1">No agent activity yet</p>
+          <p className="text-xs text-gray-400">Your agents will post activity updates here</p>
         </div>
       ) : (
         <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
