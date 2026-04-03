@@ -3,6 +3,8 @@ import { readStore, updateStore, addAgentLog } from "@/lib/db";
 import { getWalletAccounts } from "@/lib/wallet";
 import { z } from "zod";
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+
 export function createPliromiMcpServer() {
   const server = new McpServer({
     name: "Pliromi Store",
@@ -25,6 +27,8 @@ export function createPliromiMcpServer() {
           price: i.maxPrice,
           minPrice: i.minPrice,
           quantity: i.quantity,
+          x402Url: `${BASE_URL}/api/x402/${i.id}`,
+          owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${BASE_URL}/api/x402/${i.id}"`,
         }));
 
       return {
@@ -87,8 +91,9 @@ export function createPliromiMcpServer() {
         .enum(["base", "ethereum", "polygon", "arbitrum", "solana"])
         .optional()
         .describe("Blockchain to pay on (default: base)"),
+      negotiatedPrice: z.number().optional().describe("Negotiated price from negotiate_price tool (omit to pay list price)"),
     },
-    async ({ productId, chain }) => {
+    async ({ productId, chain, negotiatedPrice }) => {
       const store = readStore();
       const product = store.inventory.find((i) => i.id === productId);
 
@@ -115,9 +120,13 @@ export function createPliromiMcpServer() {
       const paymentAddress =
         chain === "solana" ? solanaAddress : evmAddress;
 
+      const finalPrice = (negotiatedPrice && negotiatedPrice > 0) ? negotiatedPrice : product.maxPrice;
+      const priceParam = negotiatedPrice ? `?price=${finalPrice}` : "";
+      const x402Url = `${BASE_URL}/api/x402/${product.id}${priceParam}`;
+
       addAgentLog(
         "seller",
-        `MCP agent initiated purchase of ${product.name} for $${product.maxPrice.toFixed(2)} USDC`
+        `MCP agent initiated purchase of ${product.name} for $${finalPrice.toFixed(2)} USDC`
       );
 
       return {
@@ -127,13 +136,14 @@ export function createPliromiMcpServer() {
             text: JSON.stringify(
               {
                 product: product.name,
-                price: product.maxPrice,
+                price: finalPrice,
                 currency: "USDC",
                 chain: chain || "base",
                 paymentAddress,
-                x402Url: `/api/x402/${product.id}`,
+                x402Url,
+                owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${x402Url}"`,
                 instructions:
-                  "Send the exact USDC amount to the payment address, then call confirm_purchase with the transaction hash.",
+                  "Pay via x402 using the owsPayCommand, or send the exact USDC amount to the payment address and then call confirm_purchase with the transaction hash.",
               },
               null,
               2
@@ -243,6 +253,10 @@ export function createPliromiMcpServer() {
         `MCP negotiation for ${product.name}: offered $${offeredPrice.toFixed(2)}, ${accepted ? "accepted" : `countered at $${counterPrice.toFixed(2)}`}`
       );
 
+      const x402Url = accepted
+        ? `${BASE_URL}/api/x402/${product.id}?price=${counterPrice}`
+        : undefined;
+
       return {
         content: [
           {
@@ -255,6 +269,10 @@ export function createPliromiMcpServer() {
               message: accepted
                 ? `Deal! ${product.name} is yours for $${counterPrice.toFixed(2)} USDC.`
                 : `I can't go that low. How about $${counterPrice.toFixed(2)} USDC for ${product.name}?`,
+              ...(x402Url && {
+                x402Url,
+                owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${x402Url}"`,
+              }),
             }),
           },
         ],

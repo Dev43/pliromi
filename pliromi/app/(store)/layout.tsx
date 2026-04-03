@@ -17,7 +17,7 @@ export default function StoreLayout({
               Accepts USDC via x402
             </span>
             <a
-              href="/.well-known/mcp.json"
+              href="/store/mcp"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-purple-500 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200 font-medium hover:bg-purple-100 transition-colors"

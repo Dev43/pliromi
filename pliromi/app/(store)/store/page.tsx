@@ -242,6 +242,125 @@ function SellerChat({ products }: { products: Product[] }) {
   );
 }
 
+// Register WebMCP tools via the imperative API (Chrome 146+)
+function safeRegisterTool(nav: { modelContext: { registerTool: (tool: unknown, opts?: unknown) => void } }, tool: unknown, opts?: unknown) {
+  try {
+    nav.modelContext.registerTool(tool, opts);
+  } catch (e) {
+    // Ignore "Duplicate tool name" errors from React strict mode / HMR
+    if (!(e instanceof Error && e.message.includes("Duplicate"))) throw e;
+  }
+}
+
+function useWebMcpTools(products: Product[]) {
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nav = navigator as any;
+    if (!nav.modelContext?.registerTool) return;
+
+    const controllers: AbortController[] = [];
+
+    // Tool: list_products
+    const listCtrl = new AbortController();
+    controllers.push(listCtrl);
+    safeRegisterTool(nav,
+      {
+        name: "list_products",
+        description: "List all products available in this store with their names, prices, stock levels, and x402 payment URLs",
+        inputSchema: { type: "object", properties: {} },
+        execute: () => {
+          return JSON.stringify(
+            products.map((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              price: p.price,
+              quantity: p.quantity,
+              x402Url: `${window.location.origin}/api/x402/${p.id}`,
+              owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${window.location.origin}/api/x402/${p.id}"`,
+            }))
+          );
+        },
+      },
+      { signal: listCtrl.signal }
+    );
+
+    // Tool: get_payment_link
+    const payCtrl = new AbortController();
+    controllers.push(payCtrl);
+    safeRegisterTool(nav,
+      {
+        name: "get_payment_link",
+        description: "Get the full x402 payment URL for a product. Use this to pay for a product with USDC via the x402 protocol. Optionally include a negotiated price.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            productId: { type: "string", description: "The product ID to get a payment link for" },
+            price: { type: "number", description: "Optional negotiated price. Omit to pay list price." },
+          },
+          required: ["productId"],
+        },
+        execute: ({ productId, price }: { productId: string; price?: number }) => {
+          const product = products.find((p) => p.id === productId);
+          if (!product) return JSON.stringify({ error: "Product not found" });
+          const priceParam = price ? `?price=${price}` : "";
+          const url = `${window.location.origin}/api/x402/${productId}${priceParam}`;
+          return JSON.stringify({
+            product: product.name,
+            price: price || product.price,
+            currency: "USDC",
+            x402Url: url,
+            owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${url}"`,
+            chains: ["base", "ethereum", "polygon", "arbitrum"],
+          });
+        },
+      },
+      { signal: payCtrl.signal }
+    );
+
+    // Tool: negotiate_price
+    const negCtrl = new AbortController();
+    controllers.push(negCtrl);
+    safeRegisterTool(nav,
+      {
+        name: "negotiate_price",
+        description: "Negotiate the price of a product with the AI seller agent. The agent may accept your offer or counter with a different price. Returns the agreed price and payment link if accepted.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            message: { type: "string", description: "Your negotiation message, e.g. 'Can I get the Widget for $3?'" },
+            productId: { type: "string", description: "Optional product ID for context" },
+          },
+          required: ["message"],
+        },
+        execute: async ({ message, productId }: { message: string; productId?: string }) => {
+          const res = await fetch("/api/agent/seller/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, productId, history: [] }),
+          });
+          const data = await res.json();
+          const result: Record<string, unknown> = {
+            reply: data.reply,
+            offeredPrice: data.offeredPrice,
+          };
+          if (data.offeredPrice && data.productId) {
+            const url = `${window.location.origin}/api/x402/${data.productId}?price=${data.offeredPrice}`;
+            result.x402Url = url;
+            result.owsPayCommand = `ows pay request --wallet <your-wallet> --no-passphrase "${url}"`;
+          }
+          return JSON.stringify(result);
+        },
+      },
+      { signal: negCtrl.signal }
+    );
+
+    return () => {
+      controllers.forEach((c) => c.abort());
+    };
+  }, [products]);
+}
+
 export default function StorePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -255,6 +374,9 @@ export default function StorePage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Register WebMCP tools for browser AI agents (Chrome 146+)
+  useWebMcpTools(products);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

@@ -159,6 +159,38 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
 
+      {/* WebMCP declarative form — lets browser AI agents discover and invoke purchase */}
+      <form
+        toolname={`buy_${product.name.toLowerCase().replace(/\s+/g, "_")}`}
+        tooldescription={`Purchase ${product.name} for $${product.price.toFixed(2)} USDC via x402 protocol. ${product.description || ""} (${product.quantity} in stock)`}
+        toolautosubmit=""
+        action={`/api/x402/${product.id}`}
+        method="GET"
+        className="hidden"
+        onSubmit={(e) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const evt = e as any;
+          if (evt.agentInvoked) {
+            e.preventDefault();
+            const url = `${window.location.origin}/api/x402/${product.id}`;
+            evt.respondWith?.(
+              Promise.resolve(
+                JSON.stringify({
+                  product: product.name,
+                  price: product.price,
+                  x402Url: url,
+                  owsPayCommand: `ows pay request --wallet <your-wallet> --no-passphrase "${url}"`,
+                  chains: ["base", "ethereum", "polygon", "arbitrum"],
+                })
+              )
+            );
+          }
+        }}
+      >
+        <input type="hidden" name="productId" value={product.id} />
+        <input type="hidden" name="chain" value="base" toolparamdescription="Blockchain to pay on: base, ethereum, polygon, or arbitrum" />
+      </form>
+
       {showPayment && (
         <PaymentModal
           product={product}
