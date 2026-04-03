@@ -118,17 +118,15 @@ function FundModal({
           <div className="flex gap-1 mt-2 bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => setTab("deposit")}
-              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                tab === "deposit" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
-              }`}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "deposit" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                }`}
             >
               MoonPay Deposit
             </button>
             <button
               onClick={() => setTab("bridge")}
-              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                tab === "bridge" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
-              }`}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "bridge" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                }`}
             >
               Relay Bridge
             </button>
@@ -240,139 +238,138 @@ function FundModal({
             </div>
           </div>
         ) : (
-        <>
-        <div className="px-5 py-4 space-y-4">
-          {/* Settle chain */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Settle USDC on</label>
-            <div className="flex flex-wrap gap-2">
-              {DEPOSIT_CHAINS.map((chain) => (
-                <button
-                  key={chain}
-                  onClick={() => setSettleChain(chain)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize ${
-                    settleChain === chain
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                      : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
-                >
-                  {chain}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Source info */}
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-            <p className="text-xs text-blue-700 font-medium mb-1">Accepted source chains</p>
-            <div className="flex gap-2">
-              {SOURCE_CHAINS.map((chain) => (
-                <span key={chain} className="text-[11px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                  {chain}
-                </span>
-              ))}
-            </div>
-            <p className="text-[10px] text-blue-500 mt-1.5">
-              Send any token from these chains — it will be auto-converted to USDC
-            </p>
-          </div>
-
-          {/* Deposit result */}
-          {deposit && (
-            <div className="space-y-3">
-              {/* Deposit link */}
-              {deposit.depositUrl && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                  <p className="text-[10px] font-medium text-emerald-600 mb-1">Deposit Link</p>
-                  <a
-                    href={deposit.depositUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-emerald-700 underline break-all"
-                  >
-                    {deposit.depositUrl}
-                  </a>
+          <>
+            <div className="px-5 py-4 space-y-4">
+              {/* Settle chain */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Settle USDC on</label>
+                <div className="flex flex-wrap gap-2">
+                  {DEPOSIT_CHAINS.map((chain) => (
+                    <button
+                      key={chain}
+                      onClick={() => setSettleChain(chain)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize ${settleChain === chain
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                        : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
+                        }`}
+                    >
+                      {chain}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
-              {/* Per-chain deposit addresses */}
-              {deposit.wallets && deposit.wallets.length > 0 && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                    <p className="text-xs font-semibold text-gray-700">Send to these addresses</p>
-                    <p className="text-[10px] text-gray-400">Any token on these chains will auto-convert to USDC</p>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {deposit.wallets.map((w) => {
-                      const icon = CHAIN_ICONS[w.chain.charAt(0).toUpperCase() + w.chain.slice(1)];
-                      return (
-                        <div key={w.chain} className="px-3 py-2.5 flex items-center gap-3">
-                          {icon ? (
-                            <img src={icon} alt={w.chain} className="w-6 h-6 rounded-full" />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500 capitalize">
-                              {w.chain.slice(0, 2)}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs font-medium text-gray-700 capitalize">{w.chain}</span>
-                            <button
-                              onClick={() => copyAddr(w.address)}
-                              className="block text-[11px] font-mono text-gray-500 hover:text-emerald-600 transition-colors truncate w-full text-left"
-                              title={w.address}
-                            >
-                              {copiedAddr === w.address ? (
-                                <span className="text-emerald-600 font-sans">Copied!</span>
+              {/* Source info */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <p className="text-xs text-blue-700 font-medium mb-1">Accepted source chains</p>
+                <div className="flex gap-2">
+                  {SOURCE_CHAINS.map((chain) => (
+                    <span key={chain} className="text-[11px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                      {chain}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-blue-500 mt-1.5">
+                  Send any token from these chains — it will be auto-converted to USDC
+                </p>
+              </div>
+
+              {/* Deposit result */}
+              {deposit && (
+                <div className="space-y-3">
+                  {/* Deposit link */}
+                  {deposit.depositUrl && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <p className="text-[10px] font-medium text-emerald-600 mb-1">Deposit Link</p>
+                      <a
+                        href={deposit.depositUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-emerald-700 underline break-all"
+                      >
+                        {deposit.depositUrl}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Per-chain deposit addresses */}
+                  {deposit.wallets && deposit.wallets.length > 0 && (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                        <p className="text-xs font-semibold text-gray-700">Send to these addresses</p>
+                        <p className="text-[10px] text-gray-400">Any token on these chains will auto-convert to USDC</p>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {deposit.wallets.map((w) => {
+                          const icon = CHAIN_ICONS[w.chain.charAt(0).toUpperCase() + w.chain.slice(1)];
+                          return (
+                            <div key={w.chain} className="px-3 py-2.5 flex items-center gap-3">
+                              {icon ? (
+                                <img src={icon} alt={w.chain} className="w-6 h-6 rounded-full" />
                               ) : (
-                                w.address
+                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500 capitalize">
+                                  {w.chain.slice(0, 2)}
+                                </div>
                               )}
-                            </button>
-                          </div>
-                          <a
-                            href={w.qrCode}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-300 hover:text-emerald-600 transition-colors flex-shrink-0"
-                            title="View QR code"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 0v3h1V4H5zM3 12a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 0v3h1v-3H5zM12 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm0 1h3v3h-3V4zM11 12a1 1 0 011-1h1v1h-1v1h1v-1h1v1h1v-1h1v1h-1v1h1v1h-1v-1h-1v1h-1v-1h-1v-1h1v-1h-1v-1z" clipRule="evenodd" />
-                            </svg>
-                          </a>
-                        </div>
-                      );
-                    })}
-                  </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium text-gray-700 capitalize">{w.chain}</span>
+                                <button
+                                  onClick={() => copyAddr(w.address)}
+                                  className="block text-[11px] font-mono text-gray-500 hover:text-emerald-600 transition-colors truncate w-full text-left"
+                                  title={w.address}
+                                >
+                                  {copiedAddr === w.address ? (
+                                    <span className="text-emerald-600 font-sans">Copied!</span>
+                                  ) : (
+                                    w.address
+                                  )}
+                                </button>
+                              </div>
+                              <a
+                                href={w.qrCode}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gray-300 hover:text-emerald-600 transition-colors flex-shrink-0"
+                                title="View QR code"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 0v3h1V4H5zM3 12a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 0v3h1v-3H5zM12 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm0 1h3v3h-3V4zM11 12a1 1 0 011-1h1v1h-1v1h1v-1h1v1h1v-1h1v1h-1v1h1v1h-1v-1h-1v1h-1v-1h-1v-1h1v-1h-1v-1z" clipRule="evenodd" />
+                                </svg>
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {error && (
+                <div className="text-xs p-2.5 rounded-lg bg-red-50 text-red-600 break-all">
+                  {error}
                 </div>
               )}
             </div>
-          )}
 
-          {error && (
-            <div className="text-xs p-2.5 rounded-lg bg-red-50 text-red-600 break-all">
-              {error}
+            <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                {deposit ? "Done" : "Cancel"}
+              </button>
+              {!deposit && (
+                <button
+                  onClick={handleCreate}
+                  disabled={executing}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {executing ? "Creating..." : "Create Deposit Address"}
+                </button>
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            {deposit ? "Done" : "Cancel"}
-          </button>
-          {!deposit && (
-            <button
-              onClick={handleCreate}
-              disabled={executing}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {executing ? "Creating..." : "Create Deposit Address"}
-            </button>
-          )}
-        </div>
-        </>
+          </>
         )}
       </div>
     </div>
@@ -568,18 +565,22 @@ export default function WalletBalances() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div>
           <h2 className="text-lg font-semibold text-gray-900">Store Treasury</h2>
-          <div className="flex items-center gap-1 text-[10px] text-gray-400">
-            <span>Powered by</span>
-            <img src="/ows-logo.svg" alt="OWS" className="h-4" />
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-400">Powered by</span>
+            <img src="/ows-logo.svg" alt="OWS" className="h-3.5" />
+            <span className="text-[10px] font-medium text-gray-500">Open Wallet Standard</span>
           </div>
         </div>
         <button
           onClick={() => { setLoading(true); fetchBalances(); }}
-          className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+          className="p-1.5 text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+          title="Refresh balances"
         >
-          Refresh
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-10.624-2.85a5.5 5.5 0 019.201-2.465l.312.31H11.77a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V3.535a.75.75 0 00-1.5 0v2.033l-.312-.311A7 7 0 002.63 8.395a.75.75 0 001.45.39z" clipRule="evenodd" />
+          </svg>
         </button>
       </div>
 

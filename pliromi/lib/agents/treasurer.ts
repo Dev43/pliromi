@@ -119,9 +119,29 @@ async function runTreasurer(): Promise<{
     `Current Lulo position: $${luloPosition.toFixed(2)}`
   );
 
-  // Step 4: Determine if deposit is needed
+  // Step 4: Check gas balances on all chains
+  const MIN_GAS: Record<string, number> = {
+    Solana: 0.01,    // SOL
+    Base: 0.0005,    // ETH
+    Ethereum: 0.001, // ETH
+    Polygon: 0.01,   // MATIC
+    Arbitrum: 0.0005, // ETH
+  };
+
+  for (const acc of accounts) {
+    const minGas = MIN_GAS[acc.chainName];
+    if (minGas === undefined) continue;
+    const nativeBal = parseFloat(acc.nativeBalance || "0");
+    if (nativeBal < minGas) {
+      const gasMsg = `WARNING: ${acc.chainName} has ${nativeBal.toFixed(6)} ${acc.nativeToken} — below minimum ${minGas} ${acc.nativeToken} needed for gas. Transactions on this chain will fail. Please fund ${acc.address} with ${acc.nativeToken}.`;
+      addAgentLog("treasurer", gasMsg);
+      postToGroup("Treasurer", gasMsg).catch(() => {});
+    }
+  }
+
+  // Step 5: Determine if Lulo deposit is needed
   const deficit = luloTarget - luloPosition;
-  if (deficit > 1) {
+  if (deficit > 0.01) {
     addAgentLog(
       "treasurer",
       `Lulo is under target by $${deficit.toFixed(2)}. Would need to deposit more USDC to Solana/Lulo.`
@@ -132,10 +152,14 @@ async function runTreasurer(): Promise<{
     const solanaAddress = solanaAccount?.address;
 
     if (parseFloat(solanaUsdc || "0") < deficit) {
-      // Find an EVM chain with enough USDC to bridge
-      const evmSource = accounts.find(
-        (a) => a.chainName !== "Solana" && parseFloat(a.usdcBalance || "0") >= deficit
-      );
+      // Find an EVM chain with enough USDC AND enough native gas to bridge
+      const evmSource = accounts.find((a) => {
+        if (a.chainName === "Solana") return false;
+        const usdc = parseFloat(a.usdcBalance || "0");
+        const native = parseFloat(a.nativeBalance || "0");
+        const minGas = MIN_GAS[a.chainName] || 0.0005;
+        return usdc >= deficit && native >= minGas;
+      });
 
       if (evmSource) {
         const bridgeAmount = deficit.toFixed(2);
@@ -178,7 +202,12 @@ async function runTreasurer(): Promise<{
           postToGroup("Treasurer", msg).catch(() => {});
         }
       } else {
-        const msg = `Insufficient funds: Only $${solanaUsdc || "0"} USDC on Solana, need $${deficit.toFixed(2)}. No EVM chain has enough USDC to bridge. Please fund the treasury.`;
+        // Explain why we can't bridge
+        const evmBalances = accounts
+          .filter((a) => a.chainName !== "Solana")
+          .map((a) => `${a.chainName}: $${parseFloat(a.usdcBalance || "0").toFixed(2)} USDC, ${parseFloat(a.nativeBalance || "0").toFixed(4)} ${a.nativeToken}`)
+          .join(", ");
+        const msg = `Cannot rebalance to Lulo: Need $${deficit.toFixed(2)} USDC on Solana but only have $${solanaUsdc || "0"}. No EVM chain has enough USDC + gas to bridge. Chain balances: ${evmBalances}. Please fund the treasury.`;
         addAgentLog("treasurer", msg);
         postToGroup("Treasurer", msg).catch(() => {});
       }
@@ -199,7 +228,7 @@ async function runTreasurer(): Promise<{
   addAgentLog("treasurer", "Treasurer run complete.");
 
   // Post summary to XMTP group
-  const summary = deficit > 1
+  const summary = deficit > 0.01
     ? `Treasury report: $${totalUsdc.toFixed(2)} total USDC. Lulo at $${luloPosition.toFixed(2)} (target: $${luloTarget.toFixed(2)}). Deficit: $${deficit.toFixed(2)} - action needed.`
     : `Treasury report: $${totalUsdc.toFixed(2)} total USDC. Lulo position on target at ${(luloPercent * 100).toFixed(0)}%. All good.`;
   postToGroup("Treasurer", summary).catch(() => {});
@@ -236,5 +265,127 @@ export function startTreasurerLoop() {
   }, interval);
 }
 
-// Export for manual triggering via API
+// Claude-powered treasurer chat
+import Anthropic from "@anthropic-ai/sdk";
+
+const anthropic = new Anthropic();
+
+function buildTreasurerSystemPrompt(treasuryData: {
+  totalUsdc: string;
+  luloTarget: string;
+  luloPosition: string;
+  accounts?: { chainName: string; usdcBalance?: string; nativeBalance?: string; nativeToken: string }[];
+}): string {
+  const luloPercent = parseFloat(process.env.LULO_ALLOCATION_PCT || "1");
+  const accountLines = (treasuryData.accounts || [])
+    .map((a) => `  - ${a.chainName}: ${parseFloat(a.usdcBalance || "0").toFixed(2)} USDC, ${parseFloat(a.nativeBalance || "0").toFixed(4)} ${a.nativeToken}`)
+    .join("\n");
+
+  return `You are the Treasurer agent for a Pliromi store. You manage the store's multi-chain treasury.
+
+CURRENT TREASURY STATE:
+- Total USDC across all chains: $${treasuryData.totalUsdc}
+- Lulo Protected Vault target: ${luloPercent}% of float = $${treasuryData.luloTarget}
+- Current Lulo position: $${treasuryData.luloPosition}
+- Balances per chain:
+${accountLines || "  (loading...)"}
+
+YOUR RESPONSIBILITIES:
+1. Monitor USDC balances across all chains (Base, Solana, Ethereum, Polygon, Arbitrum)
+2. Ensure ${luloPercent}% of the total USDC float is deposited in Lulo Protected Vault (Solana DeFi) for yield
+3. Bridge USDC between chains using Relay protocol when needed
+4. Report on treasury health and recommend actions
+
+CAPABILITIES:
+- You can run a treasury check anytime (checking all balances and Lulo position)
+- You can bridge USDC from EVM chains to Solana via Relay
+- You can deposit USDC to Lulo Protected Vault on Solana
+- You can send USDC or native tokens to any address
+
+COMMANDS YOU RESPOND TO:
+- "status" or "report" — give a full treasury report
+- "rebalance" — check if Lulo is under target and take action
+- "bridge X USDC from [chain] to [chain]" — explain how you'd bridge
+- "deposit X to lulo" — explain the Lulo deposit process
+- Any other treasury question — answer helpfully
+
+RULES:
+- Always be precise with numbers. Use $ for USD amounts.
+- If asked to rebalance, run the check and report what actions are needed.
+- If funds are insufficient, clearly explain what's missing and suggest funding the treasury.
+- Keep responses concise but informative. You're a professional treasury manager.
+- When the user asks you to rebalance, confirm what you will do before executing.`;
+}
+
+export async function chatWithTreasurer(
+  message: string,
+  history?: { role: "user" | "assistant"; content: string }[]
+): Promise<string> {
+  // Get current treasury state
+  let treasuryData: { totalUsdc: string; luloTarget: string; luloPosition: string; accounts?: { chainName: string; usdcBalance?: string; nativeBalance?: string; nativeToken: string }[] };
+
+  try {
+    const accounts = await getBalances();
+    const totalUsdc = accounts.reduce((sum, acc) => sum + parseFloat(acc.usdcBalance || "0"), 0);
+    const luloPercent = parseFloat(process.env.LULO_ALLOCATION_PCT || "1") / 100;
+    treasuryData = {
+      totalUsdc: totalUsdc.toFixed(2),
+      luloTarget: (totalUsdc * luloPercent).toFixed(2),
+      luloPosition: "0.00", // Would come from Lulo API
+      accounts,
+    };
+  } catch {
+    treasuryData = { totalUsdc: "0.00", luloTarget: "0.00", luloPosition: "0.00" };
+  }
+
+  const systemPrompt = buildTreasurerSystemPrompt(treasuryData);
+
+  // Check if user wants to trigger rebalance
+  const lowerMsg = message.toLowerCase();
+  if (lowerMsg.includes("rebalance") || lowerMsg === "run" || lowerMsg === "execute") {
+    try {
+      const result = await runTreasurer();
+      const actionReport = `I've run a treasury rebalance check.\n\nResults:\n- Total USDC: $${result.totalUsdc}\n- Lulo Target: $${result.luloTarget}\n- Lulo Position: $${result.luloPosition}\n\n`;
+
+      // Still send to Claude for a natural response
+      const messages: { role: "user" | "assistant"; content: string }[] = [
+        ...(history || []),
+        { role: "user" as const, content: `I asked you to rebalance. Here are the results of the rebalance run: ${actionReport}. Now respond to me about what happened and what actions were taken or still needed. Original message: "${message}"` },
+      ];
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 400,
+        system: systemPrompt,
+        messages,
+      });
+
+      return response.content[0].type === "text" ? response.content[0].text : actionReport;
+    } catch (err) {
+      return `Rebalance failed: ${err instanceof Error ? err.message : "Unknown error"}`;
+    }
+  }
+
+  // Regular chat
+  const messages: { role: "user" | "assistant"; content: string }[] = [
+    ...(history || []),
+    { role: "user" as const, content: message },
+  ];
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 400,
+      system: systemPrompt,
+      messages,
+    });
+
+    const reply = response.content[0].type === "text" ? response.content[0].text : "I couldn't process that request.";
+    addAgentLog("treasurer", `Chat: "${message.slice(0, 60)}..." → responded`);
+    return reply;
+  } catch (err) {
+    return `I encountered an error: ${err instanceof Error ? err.message : "Unknown error"}. Please try again.`;
+  }
+}
+
 export { runTreasurer };
