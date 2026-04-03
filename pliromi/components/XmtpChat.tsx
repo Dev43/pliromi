@@ -246,14 +246,27 @@ export default function XmtpChat() {
     };
   }, []);
 
+  const COMMANDS = [
+    { cmd: "/treasurer", desc: "Ask the Treasurer agent", hint: "/treasurer [question or 'status']" },
+    { cmd: "/seller", desc: "Ask the Seller agent", hint: "/seller [question about products]" },
+  ];
+
+  const [showCommands, setShowCommands] = useState(false);
+
+  // Show autocomplete when typing "/"
+  useEffect(() => {
+    setShowCommands(newMessage === "/" || (newMessage.startsWith("/") && !newMessage.includes(" ")));
+  }, [newMessage]);
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !groupRef.current) return;
 
     const text = newMessage.trim();
     setNewMessage("");
+    setShowCommands(false);
 
-    // Optimistically add message to the list
+    // Optimistically add user message
     const optimisticMsg: ChatMessage = {
       id: `local-${Date.now()}`,
       senderInboxId: inboxId || "",
@@ -262,11 +275,46 @@ export default function XmtpChat() {
     };
     setMessages((prev) => [...prev, optimisticMsg]);
 
+    // Check if it's a slash command
+    if (text.startsWith("/treasurer") || text.startsWith("/seller")) {
+      // Try sending to XMTP group (non-blocking)
+      if (groupRef.current) {
+        groupRef.current.sendText(text).catch(() => {});
+      }
+
+      // Process command via API
+      try {
+        const res = await fetch("/api/xmtp/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        const reply = data.reply || data.error || "No response from agent";
+        const agentMsg: ChatMessage = {
+          id: `agent-${Date.now()}`,
+          senderInboxId: data.agent === "treasurer" ? "treasurer-agent" : "seller-agent",
+          content: reply,
+          sentAt: new Date(),
+        };
+        setMessages((prev) => [...prev, agentMsg]);
+      } catch (err) {
+        const errMsg: ChatMessage = {
+          id: `error-${Date.now()}`,
+          senderInboxId: "system",
+          content: `Command failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+          sentAt: new Date(),
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      }
+      return;
+    }
+
+    // Regular message
     try {
       await groupRef.current.sendText(text);
     } catch (err) {
       console.error("Send error:", err);
-      // Remove optimistic message on failure
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
       setNewMessage(text);
     }
@@ -338,7 +386,11 @@ export default function XmtpChat() {
               className={`rounded-lg p-2.5 text-xs ${
                 isOwnMessage(msg.senderInboxId)
                   ? "bg-emerald-50 border border-emerald-100 ml-4"
-                  : "bg-gray-50 border border-gray-100 mr-4"
+                  : msg.senderInboxId === "treasurer-agent"
+                    ? "bg-amber-50 border border-amber-100 mr-4"
+                    : msg.senderInboxId === "seller-agent"
+                      ? "bg-purple-50 border border-purple-100 mr-4"
+                      : "bg-gray-50 border border-gray-100 mr-4"
               }`}
             >
               <div className="flex items-center gap-2 mb-0.5">
@@ -346,10 +398,17 @@ export default function XmtpChat() {
                   className={`font-semibold ${
                     isOwnMessage(msg.senderInboxId)
                       ? "text-emerald-700"
-                      : "text-blue-600"
+                      : msg.senderInboxId === "treasurer-agent"
+                        ? "text-amber-700"
+                        : msg.senderInboxId === "seller-agent"
+                          ? "text-purple-700"
+                          : "text-blue-600"
                   }`}
                 >
-                  {isOwnMessage(msg.senderInboxId) ? "You" : truncateId(msg.senderInboxId)}
+                  {isOwnMessage(msg.senderInboxId) ? "You"
+                    : msg.senderInboxId === "treasurer-agent" ? "Treasurer"
+                    : msg.senderInboxId === "seller-agent" ? "Seller"
+                    : truncateId(msg.senderInboxId)}
                 </span>
                 <span className="text-gray-300">
                   {new Date(msg.sentAt).toLocaleTimeString([], {
@@ -367,12 +426,31 @@ export default function XmtpChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="flex gap-2">
+      {/* Slash command autocomplete — inline above input */}
+      {showCommands && (
+        <div className="mb-2 border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden flex-shrink-0">
+          {COMMANDS.filter((c) => c.cmd.startsWith(newMessage)).map((c) => (
+            <button
+              key={c.cmd}
+              onClick={() => { setNewMessage(c.cmd + " "); setShowCommands(false); }}
+              className="w-full px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors border-b border-gray-50 last:border-0"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-emerald-700">{c.cmd}</span>
+                <span className="text-xs text-gray-500">{c.desc}</span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-0.5">{c.hint}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={sendMessage} className="flex gap-2 flex-shrink-0">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
+          placeholder="Type / for commands or a message..."
           className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         />
         <button

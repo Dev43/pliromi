@@ -15,6 +15,12 @@ export default function ChatWidget() {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [agentInboxId, setAgentInboxId] = useState<string | null>(null);
+  const [showCommands, setShowCommands] = useState(false);
+
+  const COMMANDS = [
+    { cmd: "/treasurer", desc: "Ask the Treasurer agent", hint: "/treasurer [status | question]" },
+    { cmd: "/seller", desc: "Ask the Seller agent", hint: "/seller [question about products]" },
+  ];
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -66,12 +72,20 @@ export default function ChatWidget() {
     };
   }, [open, fetchMessages]);
 
+  // Show autocomplete when typing "/"
+  useEffect(() => {
+    setShowCommands(
+      newMessage === "/" || (newMessage.startsWith("/") && !newMessage.includes(" "))
+    );
+  }, [newMessage]);
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || sending) return;
 
     const text = newMessage.trim();
     setNewMessage("");
+    setShowCommands(false);
     setSending(true);
 
     // Optimistic add
@@ -83,13 +97,53 @@ export default function ChatWidget() {
     };
     setMessages((prev) => [...prev, optimistic]);
 
+    // Handle slash commands
+    if (text.startsWith("/treasurer") || text.startsWith("/seller")) {
+      try {
+        // Send to XMTP group (non-blocking)
+        fetch("/api/xmtp/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        }).catch(() => {});
+
+        // Process command
+        const res = await fetch("/api/xmtp/command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        const reply = data.reply || data.error || "No response";
+
+        const agentMsg: ChatMessage = {
+          id: `agent-${Date.now()}`,
+          senderInboxId: data.agent === "treasurer" ? "treasurer-agent" : "seller-agent",
+          content: reply,
+          sentAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, agentMsg]);
+      } catch {
+        const errMsg: ChatMessage = {
+          id: `error-${Date.now()}`,
+          senderInboxId: "system",
+          content: "Command failed. Try again.",
+          sentAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // Regular message
     try {
       await fetch("/api/xmtp/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
-      // Let the next poll cycle pick up the real message and replace optimistic
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       setNewMessage(text);
@@ -111,7 +165,7 @@ export default function ChatWidget() {
     <>
       {/* Chat Panel */}
       {open && (
-        <div className="fixed bottom-20 right-4 w-[360px] h-[480px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 overflow-hidden">
+        <div className="fixed bottom-20 right-4 w-[400px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 overflow-hidden">
           {/* Header */}
           <div className="bg-emerald-600 px-4 py-3 flex items-center justify-between shrink-0">
             <div>
@@ -148,24 +202,33 @@ export default function ChatWidget() {
             ) : (
               messages.map((msg) => {
                 const own = isAgentMessage(msg.senderInboxId);
+                const isAgent = msg.senderInboxId === "treasurer-agent" || msg.senderInboxId === "seller-agent";
                 return (
                   <div
                     key={msg.id}
                     className={`flex ${own ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
-                        own
-                          ? "bg-emerald-600 text-white rounded-br-sm"
-                          : "bg-white text-gray-800 border border-gray-200 rounded-bl-sm"
+                      className={`rounded-xl px-3 py-2 text-sm ${
+                        isAgent
+                          ? "max-w-[95%] bg-white text-gray-800 border border-gray-200 rounded-bl-sm"
+                          : own
+                            ? "max-w-[80%] bg-emerald-600 text-white rounded-br-sm"
+                            : "max-w-[85%] bg-white text-gray-800 border border-gray-200 rounded-bl-sm"
                       }`}
                     >
                       {!own && (
-                        <div className="text-[10px] font-medium text-gray-400 mb-0.5">
-                          {truncateId(msg.senderInboxId)}
+                        <div className={`text-[10px] font-medium mb-0.5 ${
+                          msg.senderInboxId === "treasurer-agent" ? "text-amber-600"
+                          : msg.senderInboxId === "seller-agent" ? "text-purple-600"
+                          : "text-gray-400"
+                        }`}>
+                          {msg.senderInboxId === "treasurer-agent" ? "Treasurer Agent"
+                           : msg.senderInboxId === "seller-agent" ? "Seller Agent"
+                           : truncateId(msg.senderInboxId)}
                         </div>
                       )}
-                      <p className="whitespace-pre-wrap leading-relaxed">
+                      <p className="whitespace-pre-wrap leading-relaxed break-words">
                         {msg.content}
                       </p>
                       <div
@@ -185,6 +248,25 @@ export default function ChatWidget() {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Slash command autocomplete */}
+          {showCommands && (
+            <div className="border-t border-gray-200 bg-white shrink-0">
+              {COMMANDS.filter((c) => c.cmd.startsWith(newMessage)).map((c) => (
+                <button
+                  key={c.cmd}
+                  onClick={() => { setNewMessage(c.cmd + " "); setShowCommands(false); }}
+                  className="w-full px-4 py-2.5 text-left hover:bg-emerald-50 transition-colors border-b border-gray-50 last:border-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-emerald-700">{c.cmd}</span>
+                    <span className="text-xs text-gray-500">{c.desc}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{c.hint}</p>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Input */}
           <form

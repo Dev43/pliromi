@@ -88,11 +88,12 @@ async function runTreasurer(): Promise<{
     `Checked balances across ${accounts.length} chains. Total USDC float: $${totalUsdc.toFixed(2)}`
   );
 
-  // Step 2: Calculate target for Lulo (30%)
-  const luloTarget = totalUsdc * 0.3;
+  // Step 2: Calculate target for Lulo (configurable via LULO_ALLOCATION_PCT, default 1%)
+  const luloPercent = parseFloat(process.env.LULO_ALLOCATION_PCT || "1") / 100;
+  const luloTarget = totalUsdc * luloPercent;
   addAgentLog(
     "treasurer",
-    `Lulo target (30% of float): $${luloTarget.toFixed(2)}`
+    `Lulo target (${(luloPercent * 100).toFixed(0)}% of float): $${luloTarget.toFixed(2)}`
   );
 
   // Step 3: Check Lulo position
@@ -191,7 +192,7 @@ async function runTreasurer(): Promise<{
   } else {
     addAgentLog(
       "treasurer",
-      `Lulo position is at or above 30% target. No action needed.`
+      `Lulo position is at or above ${(luloPercent * 100).toFixed(0)}% target. No action needed.`
     );
   }
 
@@ -200,7 +201,7 @@ async function runTreasurer(): Promise<{
   // Post summary to XMTP group
   const summary = deficit > 1
     ? `Treasury report: $${totalUsdc.toFixed(2)} total USDC. Lulo at $${luloPosition.toFixed(2)} (target: $${luloTarget.toFixed(2)}). Deficit: $${deficit.toFixed(2)} - action needed.`
-    : `Treasury report: $${totalUsdc.toFixed(2)} total USDC. Lulo position on target at 30%. All good.`;
+    : `Treasury report: $${totalUsdc.toFixed(2)} total USDC. Lulo position on target at ${(luloPercent * 100).toFixed(0)}%. All good.`;
   postToGroup("Treasurer", summary).catch(() => {});
 
   return {

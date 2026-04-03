@@ -566,9 +566,15 @@ export default function WalletBalances() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Store Treasury</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900">Store Treasury</h2>
+          <div className="flex items-center gap-1 text-[10px] text-gray-400">
+            <span>Powered by</span>
+            <img src="/ows-logo.svg" alt="OWS" className="h-4" />
+          </div>
+        </div>
         <button
           onClick={() => { setLoading(true); fetchBalances(); }}
           className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
@@ -630,7 +636,7 @@ export default function WalletBalances() {
       {loading ? (
         <div className="text-center text-gray-400 py-8">Loading balances...</div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[420px] overflow-y-auto">
           {accounts.map((acc, idx) => {
             const icon = CHAIN_ICONS[acc.chainName];
             const usdcVal = parseFloat(acc.usdcBalance || "0");
@@ -664,10 +670,10 @@ export default function WalletBalances() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <button
                         onClick={() => copyAddress(acc.address)}
-                        className="text-xs text-gray-400 hover:text-emerald-600 font-mono transition-colors cursor-pointer"
+                        className="text-xs text-gray-400 hover:text-emerald-600 font-mono transition-colors cursor-pointer truncate max-w-[100px]"
                         title="Click to copy address"
                       >
                         {copiedAddr === acc.address ? (
@@ -678,7 +684,7 @@ export default function WalletBalances() {
                       </button>
                       <button
                         onClick={() => setQrAccount(acc)}
-                        className="text-gray-300 hover:text-emerald-600 transition-colors"
+                        className="text-gray-300 hover:text-emerald-600 transition-colors shrink-0"
                         title="Show QR code"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
@@ -687,14 +693,14 @@ export default function WalletBalances() {
                       </button>
                       <button
                         onClick={() => setFundAccount(acc)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 font-semibold transition-colors shadow-sm"
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 font-semibold transition-colors shadow-sm shrink-0"
                         title="Fund this wallet"
                       >
                         Fund
                       </button>
                       <button
                         onClick={() => setSendAccount(acc)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 font-semibold transition-colors shadow-sm"
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 font-semibold transition-colors shadow-sm shrink-0"
                         title="Send from this wallet"
                       >
                         Send
@@ -722,6 +728,13 @@ export default function WalletBalances() {
           address={qrAccount.address}
           chainName={qrAccount.chainName}
           onClose={() => setQrAccount(null)}
+        />
+      )}
+
+      {sendAccount && (
+        <SendModal
+          account={sendAccount}
+          onClose={() => setSendAccount(null)}
         />
       )}
 
