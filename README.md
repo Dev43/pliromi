@@ -2,26 +2,26 @@
 
 **AI-Powered Store & Treasury Management on the Open Wallet Standard**
 
-> *Pliromi* (Greek: payment) is a full-stack store and treasury management system where AI agents and humans collaborate to run a business — managing multi-chain wallets, selling products, haggling prices, farming yield, and accepting crypto payments — all built on [OWS](https://openwallet.sh), [x402](https://www.x402.org/), [XMTP](https://xmtp.org), [MoonPay](https://moonpay.com), and [Lulo Finance](https://lulo.fi).
+> *Pliromi* (Greek: payment) is a full-stack store and treasury management system where AI agents and humans collaborate to run a business - managing multi-chain wallets, selling products, haggling prices, farming yield, and accepting crypto payments - all built on [OWS](https://openwallet.sh), [x402](https://www.x402.org/), [XMTP](https://xmtp.org), [MoonPay](https://moonpay.com), and [Lulo Finance](https://lulo.fi).
 
-![Pliromi landing page — AI-powered store and treasury management](Splash.png)
+![Pliromi landing page - AI-powered store and treasury management](Splash.png)
 
 ---
 
 
 ## The Problem
 
-Running a crypto-native store today means juggling multiple wallets, manually monitoring balances across chains, setting up payment infrastructure, and coordinating between team members. There's no unified system that combines treasury management, inventory, AI agents, and crypto payments into a single experience — and certainly nothing an AI agent can interact with natively.
+Running a crypto-native store today means juggling multiple wallets, manually monitoring balances across chains, setting up payment infrastructure, and coordinating between team members. There's no unified system that combines treasury management, inventory, AI agents, and crypto payments into a single experience - and certainly nothing an AI agent can interact with natively.
 
 ## The Solution
 
 Pliromi brings everything together:
 
-- **One wallet, every chain** — OWS manages keys for 11+ blockchains from a single encrypted vault
-- **AI agents that work for you** — A Treasurer watches your float and farms yield; a Seller negotiates prices with customers
-- **Pay with a URL** — x402 protocol turns every product into a payable endpoint
-- **Any agent can shop here** — The store is a WebMCP server that browser AI agents and CLI tools can interact with directly
-- **Team coordination** — XMTP group chat keeps humans and agents in sync with policy-governed spending limits
+- **One wallet, every chain** - OWS manages keys for 11+ blockchains from a single encrypted vault
+- **AI agents that work for you** - A Treasurer watches your float and farms yield; a Seller negotiates prices with customers
+- **Pay with a URL** - x402 protocol turns every product into a payable endpoint
+- **Any agent can shop here** - The store is a WebMCP server that browser AI agents and CLI tools can interact with directly
+- **Team coordination** - XMTP group chat keeps humans and agents in sync with policy-governed spending limits
 - **On/off ramp and bridging/swap** - Moonpay does it all using their CLI. Fast, easy and safely
 
 ---
@@ -66,12 +66,12 @@ Pliromi brings everything together:
 - Wallet "hackathon" with derived addresses on Ethereum, Base, Polygon, Arbitrum, Solana, Bitcoin, Cosmos, Tron, TON, Sui, and Filecoin
 - Real-time USDC + native token balances across all chains
 - Policy engine: per-member spending limits (max/tx, daily cap, chain restrictions)
-- Team API keys with configurable policies — agents and humans each get scoped access
+- Team API keys with configurable policies - agents and humans each get scoped access
 - QR codes and copy-to-clipboard for every address
 
 ### AI Agents
-- **Treasurer** — Runs every 5 minutes. Checks total USDC float, targets a configurable percentage in Lulo yield farming (Solana). Bridges USDC from EVM chains via Relay when Solana balance is insufficient. Monitors gas levels. Posts treasury reports to XMTP group chat.
-- **Seller** — Powered by Claude (claude-sonnet-4-6). Negotiates prices with customers (starts at max, never below min). Returns full x402 payment URLs with negotiated `?price=` parameter. Logs deals to XMTP group.
+- **Treasurer** - Runs every 5 minutes. Checks total USDC float, targets a configurable percentage in Lulo yield farming (Solana). Bridges USDC from EVM chains via Relay when Solana balance is insufficient. Monitors gas levels. Posts treasury reports to XMTP group chat.
+- **Seller** - Powered by Claude (claude-sonnet-4-6). Negotiates prices with customers (starts at max, never below min). Returns full x402 payment URLs with negotiated `?price=` parameter. Logs deals to XMTP group.
 
 ### x402 Payments
 - Every product is a payable URL: `GET /api/x402/{productId}` returns `402 Payment Required` with USDC payment details
@@ -81,12 +81,12 @@ Pliromi brings everything together:
 - CLI payment: `ows pay request --wallet myWallet "http://store/api/x402/{id}"`
 
 ### WebMCP (Chrome 146+)
-The store is a **WebMCP server** — AI agents browsing the site in Chrome can discover and invoke tools directly:
+The store is a **WebMCP server** - AI agents browsing the site in Chrome can discover and invoke tools directly:
 
 **Imperative tools** (via `navigator.modelContext.registerTool`):
-- `list_products` — Browse all products with prices, stock, and x402 payment links
-- `get_payment_link` — Get the full x402 URL for any product, with optional negotiated price
-- `negotiate_price` — Chat with the seller agent to haggle for a better deal
+- `list_products` - Browse all products with prices, stock, and x402 payment links
+- `get_payment_link` - Get the full x402 URL for any product, with optional negotiated price
+- `negotiate_price` - Chat with the seller agent to haggle for a better deal
 
 **Declarative tools** (via HTML form annotations):
 - Each product card has a `<form toolname="buy_...">` that browser agents can invoke
@@ -100,8 +100,8 @@ The store is a **WebMCP server** — AI agents browsing the site in Chrome can d
 - Optimistic message rendering with stream dedup
 
 ### MoonPay Integration
-- **Deposits** — Create multi-chain deposit addresses that auto-convert any token to USDC (Solana, Ethereum, Bitcoin, Tron sources)
-- **Commerce** — Browse Shopify stores accepting Solana Pay, search products, manage cart, checkout with crypto
+- **Deposits** - Create multi-chain deposit addresses that auto-convert any token to USDC (Solana, Ethereum, Bitcoin, Tron sources)
+- **Commerce** - Browse Shopify stores accepting Solana Pay, search products, manage cart, checkout with crypto
 
 ### Laso Finance Debit Cards
 - Order prepaid debit cards ($5–$500+) paid via x402
@@ -121,15 +121,15 @@ The store is a **WebMCP server** — AI agents browsing the site in Chrome can d
 
 | Layer | Technology |
 |-------|-----------|
-| **Wallet** | [Open Wallet Standard](https://openwallet.sh) — multi-chain key management, policy engine |
-| **Payments** | [x402 Protocol](https://www.x402.org/) — HTTP 402 Payment Required |
-| **Messaging** | [XMTP](https://xmtp.org) — decentralized group chat |
-| **On-ramp** | [MoonPay](https://moonpay.com) — deposits, commerce, Shopify |
-| **DeFi** | [Lulo Finance](https://lulo.fi) — USDC yield farming on Solana |
-| **Cards** | [Laso Finance](https://laso.finance) — prepaid debit cards |
-| **Bridging** | [Relay](https://relay.link) — cross-chain USDC transfers |
-| **AI** | [Claude](https://anthropic.com) (claude-sonnet-4-6) — seller agent |
-| **Agent Protocol** | [WebMCP](https://developer.chrome.com/docs/ai/webmcp) — browser-native tool registration |
+| **Wallet** | [Open Wallet Standard](https://openwallet.sh) - multi-chain key management, policy engine |
+| **Payments** | [x402 Protocol](https://www.x402.org/) - HTTP 402 Payment Required |
+| **Messaging** | [XMTP](https://xmtp.org) - decentralized group chat |
+| **On-ramp** | [MoonPay](https://moonpay.com) - deposits, commerce, Shopify |
+| **DeFi** | [Lulo Finance](https://lulo.fi) - USDC yield farming on Solana |
+| **Cards** | [Laso Finance](https://laso.finance) - prepaid debit cards |
+| **Bridging** | [Relay](https://relay.link) - cross-chain USDC transfers |
+| **AI** | [Claude](https://anthropic.com) (claude-sonnet-4-6) - seller agent |
+| **Agent Protocol** | [WebMCP](https://developer.chrome.com/docs/ai/webmcp) - browser-native tool registration |
 | **Frontend** | Next.js 16, React 19, Tailwind CSS 4 |
 | **Storage** | JSON file database with in-memory cache |
 
@@ -163,11 +163,11 @@ npm run dev
 
 ### Usage
 
-1. **Visit** `http://localhost:3000` — Landing page with overview
-2. **Onboard** at `/onboarding` — Create your org, configure agent policies
-3. **Dashboard** at `/dashboard` — View treasury, manage inventory, chat with team
-4. **Store** at `/store` — Public storefront where customers (human or AI) shop
-5. **WebMCP** — Open store in Chrome 146+ with the flag enabled, use the Model Context Tool Inspector extension to see registered tools
+1. **Visit** `http://localhost:3000` - Landing page with overview
+2. **Onboard** at `/onboarding` - Create your org, configure agent policies
+3. **Dashboard** at `/dashboard` - View treasury, manage inventory, chat with team
+4. **Store** at `/store` - Public storefront where customers (human or AI) shop
+5. **WebMCP** - Open store in Chrome 146+ with the flag enabled, use the Model Context Tool Inspector extension to see registered tools
 
 ---
 
@@ -221,12 +221,12 @@ pliromi/
 
 | Sponsor | Integration |
 |---------|------------|
-| **OWS** | Core wallet infrastructure — key management, multi-chain derivation, policy engine, API keys, transaction signing for all payment flows |
-| **XMTP** | Team communication — group chat between humans and AI agents, slash commands, real-time activity feed |
+| **OWS** | Core wallet infrastructure - key management, multi-chain derivation, policy engine, API keys, transaction signing for all payment flows |
+| **XMTP** | Team communication - group chat between humans and AI agents, slash commands, real-time activity feed |
 | **MoonPay** | Deposits (auto-convert to USDC), Shopify commerce (browse + Solana Pay checkout) |
-| **Lulo** | DeFi yield — Treasurer agent auto-deposits configurable % of USDC float to protected vault |
-| **Laso** | Prepaid debit cards — ordered and paid via x402, assigned to team members/agents |
-| **Relay** | Cross-chain USDC bridging — Treasurer bridges from EVM chains to Solana for Lulo deposits |
+| **Lulo** | DeFi yield - Treasurer agent auto-deposits configurable % of USDC float to protected vault |
+| **Laso** | Prepaid debit cards - ordered and paid via x402, assigned to team members/agents |
+| **Relay** | Cross-chain USDC bridging - Treasurer bridges from EVM chains to Solana for Lulo deposits |
 
 ---
 
