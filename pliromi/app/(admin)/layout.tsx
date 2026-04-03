@@ -7,6 +7,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/team", label: "Manage Team" },
   { href: "/fund", label: "Fund Addresses" },
+  { href: "/debit-card", label: "Debit Cards" },
 ];
 
 export default function AdminLayout({

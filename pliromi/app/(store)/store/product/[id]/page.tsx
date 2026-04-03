@@ -10,6 +10,7 @@ interface Product {
   description: string;
   price: number;
   quantity: number;
+  imageUrl?: string;
 }
 
 export default function ProductDetailPage() {
@@ -91,10 +92,18 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Product Info */}
         <div>
-          <div className="h-64 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl flex items-center justify-center mb-6">
-            <div className="text-7xl font-bold text-emerald-200">
-              {product.name.charAt(0).toUpperCase()}
-            </div>
+          <div className="h-64 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl flex items-center justify-center mb-6 overflow-hidden">
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-7xl font-bold text-emerald-200">
+                {product.name.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
           <p className="text-gray-500 mb-4">{product.description}</p>

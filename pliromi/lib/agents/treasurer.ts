@@ -2,6 +2,7 @@ import { addAgentLog } from "@/lib/db";
 import { getBalances, getWalletInfo } from "@/lib/wallet";
 import { postToGroup } from "@/lib/xmtp-agent";
 import { signAndSend } from "@open-wallet-standard/core";
+import { getRelayQuote } from "@/lib/relay";
 
 const DEFAULT_INTERVAL = 300_000; // 5 minutes
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -30,7 +31,9 @@ async function depositToLulo(solanaAddress: string, amountUsdc: number): Promise
 
     if (!res.ok) {
       const err = await res.text();
-      addAgentLog("treasurer", `Lulo deposit tx generation failed: ${err}`);
+      const msg = `Lulo deposit tx generation failed: ${err}`;
+      addAgentLog("treasurer", msg);
+      postToGroup("Treasurer", msg).catch(() => {});
       return false;
     }
 
@@ -38,7 +41,9 @@ async function depositToLulo(solanaAddress: string, amountUsdc: number): Promise
     const txBase64 = data.transaction;
 
     if (!txBase64) {
-      addAgentLog("treasurer", "Lulo returned no transaction data");
+      const msg = "Lulo returned no transaction data";
+      addAgentLog("treasurer", msg);
+      postToGroup("Treasurer", msg).catch(() => {});
       return false;
     }
 
@@ -53,11 +58,14 @@ async function depositToLulo(solanaAddress: string, amountUsdc: number): Promise
       SOLANA_RPC
     );
 
-    addAgentLog("treasurer", `Lulo deposit successful! Tx: ${result.txHash}`);
+    const successMsg = `Lulo deposit successful! Tx: ${result.txHash}`;
+    addAgentLog("treasurer", successMsg);
+    postToGroup("Treasurer", successMsg).catch(() => {});
     return true;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    addAgentLog("treasurer", `Lulo deposit failed: ${msg}`);
+    const msg = `Lulo deposit failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+    addAgentLog("treasurer", msg);
+    postToGroup("Treasurer", msg).catch(() => {});
     return false;
   }
 }
@@ -100,7 +108,9 @@ async function runTreasurer(): Promise<{
       luloPosition = luloData?.totalBalance || 0;
     }
   } catch {
-    addAgentLog("treasurer", "Could not reach Lulo API - skipping position check");
+    const msg = "Could not reach Lulo API - skipping position check";
+    addAgentLog("treasurer", msg);
+    postToGroup("Treasurer", msg).catch(() => {});
   }
 
   addAgentLog(
@@ -121,10 +131,56 @@ async function runTreasurer(): Promise<{
     const solanaAddress = solanaAccount?.address;
 
     if (parseFloat(solanaUsdc || "0") < deficit) {
-      addAgentLog(
-        "treasurer",
-        `Insufficient USDC on Solana ($${solanaUsdc || "0"}). Would need to bridge from EVM chains via MoonPay.`
+      // Find an EVM chain with enough USDC to bridge
+      const evmSource = accounts.find(
+        (a) => a.chainName !== "Solana" && parseFloat(a.usdcBalance || "0") >= deficit
       );
+
+      if (evmSource) {
+        const bridgeAmount = deficit.toFixed(2);
+        addAgentLog(
+          "treasurer",
+          `Bridging $${bridgeAmount} USDC from ${evmSource.chainName} to Solana via Relay...`
+        );
+
+        try {
+          const chainKey = evmSource.chainName.toLowerCase();
+          const quote = await getRelayQuote({
+            user: evmSource.address,
+            fromChain: chainKey,
+            toChain: "solana",
+            token: "usdc",
+            amount: bridgeAmount,
+            recipient: solanaAddress,
+          });
+
+          addAgentLog(
+            "treasurer",
+            `Relay bridge quote received: ${quote.steps?.length || 0} step(s). Ready to sign and execute.`
+          );
+
+          // In production: iterate steps, sign with OWS, submit
+          // For hackathon demo: log the quote
+          for (const step of quote.steps || []) {
+            for (const item of step.items || []) {
+              if (step.kind === "transaction" && item.data) {
+                addAgentLog(
+                  "treasurer",
+                  `Bridge tx: ${item.data.to?.slice(0, 10)}... on chain ${item.data.chainId}, value: ${item.data.value}`
+                );
+              }
+            }
+          }
+        } catch (err) {
+          const msg = `Relay bridge failed: ${err instanceof Error ? err.message : "Unknown error"}`;
+          addAgentLog("treasurer", msg);
+          postToGroup("Treasurer", msg).catch(() => {});
+        }
+      } else {
+        const msg = `Insufficient funds: Only $${solanaUsdc || "0"} USDC on Solana, need $${deficit.toFixed(2)}. No EVM chain has enough USDC to bridge. Please fund the treasury.`;
+        addAgentLog("treasurer", msg);
+        postToGroup("Treasurer", msg).catch(() => {});
+      }
     } else if (solanaAddress) {
       addAgentLog(
         "treasurer",

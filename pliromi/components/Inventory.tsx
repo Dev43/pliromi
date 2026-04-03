@@ -22,6 +22,7 @@ export default function Inventory() {
     minPrice: "",
     maxPrice: "",
     quantity: "",
+    imageUrl: "",
   });
 
   const fetchInventory = useCallback(async () => {
@@ -52,9 +53,10 @@ export default function Inventory() {
           minPrice: parseFloat(newItem.minPrice),
           maxPrice: parseFloat(newItem.maxPrice),
           quantity: parseInt(newItem.quantity) || 0,
+          imageUrl: newItem.imageUrl || undefined,
         }),
       });
-      setNewItem({ name: "", description: "", minPrice: "", maxPrice: "", quantity: "" });
+      setNewItem({ name: "", description: "", minPrice: "", maxPrice: "", quantity: "", imageUrl: "" });
       setShowAdd(false);
       fetchInventory();
     } catch (err) {
@@ -100,6 +102,23 @@ export default function Inventory() {
             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
             className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
+          <input
+            type="url"
+            placeholder="Image URL (optional)"
+            value={newItem.imageUrl}
+            onChange={(e) => setNewItem({ ...newItem, imageUrl: e.target.value })}
+            className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          {newItem.imageUrl && (
+            <div className="w-full h-24 rounded overflow-hidden border border-gray-200 bg-gray-100">
+              <img
+                src={newItem.imageUrl}
+                alt="Preview"
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             <input
               type="number"
@@ -150,15 +169,30 @@ export default function Inventory() {
               className="bg-gray-50 rounded-lg p-3 border border-gray-100"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-gray-800 truncate">
-                    {item.name}
-                  </h3>
-                  {item.description && (
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {item.description}
-                    </p>
+                <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-10 h-10 rounded object-cover shrink-0 border border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
+                      <span className="text-sm font-bold text-emerald-300">
+                        {item.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-gray-800 truncate">
+                      {item.name}
+                    </h3>
+                    {item.description && (
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => deleteItem(item.id)}

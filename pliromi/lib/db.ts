@@ -56,6 +56,17 @@ export interface LuloPosition {
   lastUpdated: string;
 }
 
+export interface LasoCard {
+  id: string;
+  assignedTo: string;
+  amount: number;
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+  status: "active" | "depleted" | "revoked";
+  createdAt: string;
+}
+
 export interface StoreData {
   org: OrgData | null;
   inventory: InventoryItem[];
@@ -63,6 +74,7 @@ export interface StoreData {
   sales: Sale[];
   agentLogs: AgentLog[];
   lulo?: LuloPosition;
+  lasoCards?: LasoCard[];
 }
 
 const DEFAULT_DATA: StoreData = {

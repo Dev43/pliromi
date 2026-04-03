@@ -56,11 +56,19 @@ function FundModal({
   const chainNameLower = account.chainName.toLowerCase();
   const defaultSettleChain = DEPOSIT_CHAINS.find((c) => chainNameLower.includes(c)) || "solana";
 
+  const [tab, setTab] = useState<"deposit" | "bridge">("deposit");
   const [settleChain, setSettleChain] = useState(defaultSettleChain);
   const [executing, setExecuting] = useState(false);
   const [deposit, setDeposit] = useState<DepositResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+
+  // Bridge state
+  const [bridgeFrom, setBridgeFrom] = useState("ethereum");
+  const [bridgeTo, setBridgeTo] = useState(chainNameLower.includes("solana") ? "solana" : "base");
+  const [bridgeToken, setBridgeToken] = useState<"usdc" | "native">("usdc");
+  const [bridgeAmount, setBridgeAmount] = useState("");
+  const [bridgeResult, setBridgeResult] = useState<string | null>(null);
 
   const copyAddr = async (addr: string) => {
     await navigator.clipboard.writeText(addr);
@@ -107,11 +115,132 @@ function FundModal({
           <h3 className="text-base font-semibold text-gray-900">
             Fund {account.chainName}
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Create a deposit address — send from any supported chain, auto-converts to USDC
-          </p>
+          <div className="flex gap-1 mt-2 bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setTab("deposit")}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                tab === "deposit" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+              }`}
+            >
+              MoonPay Deposit
+            </button>
+            <button
+              onClick={() => setTab("bridge")}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                tab === "bridge" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+              }`}
+            >
+              Relay Bridge
+            </button>
+          </div>
         </div>
 
+        {tab === "bridge" ? (
+          <div className="px-5 py-4 space-y-4">
+            <p className="text-xs text-gray-400">
+              Bridge tokens between chains using Relay protocol
+            </p>
+
+            {/* Token type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Token</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBridgeToken("usdc")}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${bridgeToken === "usdc" ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                >
+                  USDC
+                </button>
+                <button
+                  onClick={() => setBridgeToken("native")}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${bridgeToken === "native" ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                >
+                  Native (ETH/SOL)
+                </button>
+              </div>
+            </div>
+
+            {/* From chain */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">From</label>
+              <div className="flex flex-wrap gap-1.5">
+                {["base", "ethereum", "polygon", "arbitrum", "solana"].map((c) => (
+                  <button key={c} onClick={() => setBridgeFrom(c)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border capitalize transition-colors ${bridgeFrom === c ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                  >{c}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* To chain */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">To</label>
+              <div className="flex flex-wrap gap-1.5">
+                {["base", "ethereum", "polygon", "arbitrum", "solana"].map((c) => (
+                  <button key={c} onClick={() => setBridgeTo(c)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border capitalize transition-colors ${bridgeTo === c ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}
+                  >{c}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Amount</label>
+              <input type="number" step="0.000001" value={bridgeAmount} onChange={(e) => setBridgeAmount(e.target.value)}
+                placeholder={bridgeToken === "usdc" ? "10.00" : "0.01"}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            {bridgeResult && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <p className="text-xs text-emerald-700 break-all">{bridgeResult}</p>
+              </div>
+            )}
+
+            {error && <p className="text-xs text-red-500">{error}</p>}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!bridgeAmount || bridgeFrom === bridgeTo) return;
+                  setExecuting(true);
+                  setError(null);
+                  setBridgeResult(null);
+                  try {
+                    const res = await fetch("/api/relay/quote", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        user: account.address,
+                        fromChain: bridgeFrom,
+                        toChain: bridgeTo,
+                        token: bridgeToken,
+                        amount: bridgeAmount,
+                        recipient: account.address,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    const steps = data.quote?.steps?.length || 0;
+                    setBridgeResult(`Relay quote received: ${steps} step(s). Sign the transaction in your wallet to execute the bridge.`);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Bridge quote failed");
+                  } finally {
+                    setExecuting(false);
+                  }
+                }}
+                disabled={executing || !bridgeAmount || bridgeFrom === bridgeTo}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {executing ? "Getting quote..." : "Get Bridge Quote"}
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div className="px-5 py-4 space-y-4">
           {/* Settle chain */}
           <div>
@@ -243,6 +372,8 @@ function FundModal({
             </button>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
@@ -273,6 +404,116 @@ function QrModal({ address, chainName, onClose }: { address: string; chainName: 
   );
 }
 
+function SendModal({ account, onClose }: { account: WalletAccount; onClose: () => void }) {
+  const [to, setTo] = useState("");
+  const [amount, setAmount] = useState("");
+  const [token, setToken] = useState<"usdc" | "native">("usdc");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const chainKey = account.chainName.toLowerCase();
+
+  const handleSend = async () => {
+    if (!to || !amount) return;
+    setSending(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/wallet/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chain: chainKey, to, amount, token }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResult(data.txHash);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-900">Send from {account.chainName}</h3>
+          <p className="text-xs text-gray-400 mt-0.5 font-mono">{account.address}</p>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {result ? (
+            <div className="space-y-3">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <p className="text-sm text-emerald-700 font-medium">Sent successfully!</p>
+                <p className="text-xs text-emerald-600 mt-1 font-mono break-all">{result}</p>
+              </div>
+              <button onClick={onClose} className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Token type */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Token</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setToken("usdc")}
+                    className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${token === "usdc" ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                    USDC
+                  </button>
+                  <button onClick={() => setToken("native")}
+                    className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${token === "native" ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                    {account.nativeToken} (native)
+                  </button>
+                </div>
+              </div>
+
+              {/* Available balance */}
+              <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                <p className="text-[10px] text-gray-400">Available</p>
+                <p className="text-sm font-semibold text-emerald-700">
+                  {token === "usdc"
+                    ? `${parseFloat(account.usdcBalance || "0").toFixed(2)} USDC`
+                    : `${parseFloat(account.nativeBalance || "0").toFixed(4)} ${account.nativeToken}`
+                  }
+                </p>
+              </div>
+
+              {/* Recipient */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Recipient Address</label>
+                <input type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x..."
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono" />
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Amount</label>
+                <input type="number" step="0.000001" value={amount} onChange={(e) => setAmount(e.target.value)}
+                  placeholder={token === "usdc" ? "10.00" : "0.01"}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+
+              {error && <p className="text-xs text-red-500">{error}</p>}
+
+              <div className="flex items-center justify-end gap-3">
+                <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                <button onClick={handleSend} disabled={sending || !to || !amount}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors">
+                  {sending ? "Sending..." : `Send ${token === "usdc" ? "USDC" : account.nativeToken}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface LuloPosition {
   balance: number;
   apy: number;
@@ -289,6 +530,7 @@ export default function WalletBalances() {
   const [lulo, setLulo] = useState<LuloPosition | null>(null);
   const [showFundModal, setShowFundModal] = useState(false);
   const [moonpayAddresses, setMoonpayAddresses] = useState<Record<string, string>>({});
+  const [sendAccount, setSendAccount] = useState<WalletAccount | null>(null);
 
   const fetchBalances = useCallback(async () => {
     try {
@@ -449,6 +691,13 @@ export default function WalletBalances() {
                         title="Fund this wallet"
                       >
                         Fund
+                      </button>
+                      <button
+                        onClick={() => setSendAccount(acc)}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 font-semibold transition-colors shadow-sm"
+                        title="Send from this wallet"
+                      >
+                        Send
                       </button>
                     </div>
                   </div>
