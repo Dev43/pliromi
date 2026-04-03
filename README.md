@@ -1,5 +1,8 @@
 # Pliromi
 
+** [Demo Video](https://www.loom.com/share/9551cc37256a4c86b75e22bb5f86b6df) **
+
+
 **AI-Powered Store & Treasury Management on the Open Wallet Standard**
 
 > *Pliromi* (Greek: payment) is a full-stack store and treasury management system where AI agents and humans collaborate to run a business - managing multi-chain wallets, selling products, haggling prices, farming yield, and accepting crypto payments - all built on [OWS](https://openwallet.sh), [x402](https://www.x402.org/), [XMTP](https://xmtp.org), [MoonPay](https://moonpay.com), and [Lulo Finance](https://lulo.fi).
