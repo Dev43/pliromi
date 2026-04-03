@@ -85,37 +85,43 @@ const DEFAULT_DATA: StoreData = {
   agentLogs: [],
 };
 
-// In-memory cache — reads are instant, writes are async
+// In-memory cache with disk-change detection
 let memoryStore: StoreData | null = null;
-let writeScheduled = false;
+let lastMtimeMs = 0;
+
+function getDiskMtime(): number {
+  try {
+    return fs.statSync(DATA_PATH).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
 
 function loadFromDisk(): StoreData {
   try {
     const raw = fs.readFileSync(DATA_PATH, "utf-8");
+    lastMtimeMs = getDiskMtime();
     return JSON.parse(raw) as StoreData;
   } catch {
     return { ...DEFAULT_DATA };
   }
 }
 
-function scheduleDiskWrite(): void {
-  if (writeScheduled) return;
-  writeScheduled = true;
-  // Batch writes — flush to disk on next tick
-  setImmediate(() => {
-    writeScheduled = false;
-    if (memoryStore) {
-      try {
-        fs.writeFile(DATA_PATH, JSON.stringify(memoryStore, null, 2), "utf-8", () => {});
-      } catch {
-        // Ignore write errors
-      }
+function flushToDisk(): void {
+  if (memoryStore) {
+    try {
+      fs.writeFileSync(DATA_PATH, JSON.stringify(memoryStore, null, 2), "utf-8");
+      lastMtimeMs = getDiskMtime();
+    } catch {
+      // Ignore write errors
     }
-  });
+  }
 }
 
 export function readStore(): StoreData {
-  if (!memoryStore) {
+  // Re-read from disk if the file was modified externally
+  const currentMtime = getDiskMtime();
+  if (!memoryStore || currentMtime > lastMtimeMs) {
     memoryStore = loadFromDisk();
   }
   return memoryStore;
@@ -123,7 +129,7 @@ export function readStore(): StoreData {
 
 export function writeStore(data: StoreData): void {
   memoryStore = data;
-  scheduleDiskWrite();
+  flushToDisk();
 }
 
 export function updateStore(updater: (data: StoreData) => void): StoreData {

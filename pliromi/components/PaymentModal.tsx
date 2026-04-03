@@ -27,10 +27,13 @@ const CHAINS = [
 export default function PaymentModal({
   product,
   onClose,
+  negotiatedPrice,
 }: {
   product: Product;
   onClose: () => void;
+  negotiatedPrice?: number;
 }) {
+  const displayPrice = negotiatedPrice || product.price;
   const [chain, setChain] = useState("base");
   const [payment, setPayment] = useState<PaymentInfo | null>(null);
   const [txHash, setTxHash] = useState("");
@@ -43,7 +46,7 @@ export default function PaymentModal({
       const res = await fetch(`/api/store/buy/${product.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chain }),
+        body: JSON.stringify({ chain, price: displayPrice }),
       });
       const data = await res.json();
       setPayment(data.payment);
@@ -61,7 +64,7 @@ export default function PaymentModal({
       const res = await fetch(`/api/x402/${product.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash, chain, price: product.price }),
+        body: JSON.stringify({ txHash, chain, price: displayPrice }),
       });
       const data = await res.json();
       if (data.success) {
@@ -84,7 +87,7 @@ export default function PaymentModal({
               Purchase Confirmed!
             </h2>
             <p className="text-gray-500 text-sm mb-4">
-              You bought {product.name} for ${product.price.toFixed(2)} USDC
+              You bought {product.name} for ${displayPrice.toFixed(2)} USDC
             </p>
             <button
               onClick={onClose}
@@ -110,8 +113,13 @@ export default function PaymentModal({
             <div className="bg-emerald-50 rounded-lg p-3 mb-4 border border-emerald-100">
               <div className="text-sm text-emerald-600">Total</div>
               <div className="text-2xl font-bold text-emerald-700">
-                ${product.price.toFixed(2)} USDC
+                ${displayPrice.toFixed(2)} USDC
               </div>
+              {negotiatedPrice && negotiatedPrice < product.price && (
+                <div className="text-xs text-emerald-500 mt-1">
+                  <span className="line-through text-gray-400">${product.price.toFixed(2)}</span> — negotiated price!
+                </div>
+              )}
             </div>
 
             <div className="mb-4">

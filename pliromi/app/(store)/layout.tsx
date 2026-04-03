@@ -16,6 +16,14 @@ export default function StoreLayout({
             <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200 font-medium">
               Accepts USDC via x402
             </span>
+            <a
+              href="/.well-known/mcp.json"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-purple-500 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200 font-medium hover:bg-purple-100 transition-colors"
+            >
+              WebMCP Enabled
+            </a>
             <Link
               href="/dashboard"
               className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"

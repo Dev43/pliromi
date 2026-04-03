@@ -628,47 +628,49 @@ export default function WalletBalances() {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-2 ml-11">
+        <div className="mt-2 ml-11">
           <div className="text-xs">
             <span className="font-semibold text-emerald-700">
               {lulo ? `$${lulo.balance.toFixed(2)}` : "$0.00"} USDC
             </span>
             <span className="text-emerald-500 ml-2">protected</span>
           </div>
-          <button
-            onClick={async () => {
-              setRebalancing(true);
-              try {
-                await fetch("/api/agent/treasurer", { method: "POST" });
-                fetchBalances();
-              } catch {
-                // silent
-              } finally {
-                setRebalancing(false);
-              }
-            }}
-            disabled={rebalancing}
-            className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300 font-semibold transition-colors shadow-sm"
-          >
-            {rebalancing ? "Rebalancing..." : "Rebalance"}
-          </button>
-          <button
-            onClick={async () => {
-              setWithdrawing(true);
-              try {
-                await fetch("/api/lulo/withdraw", { method: "POST" });
-                fetchBalances();
-              } catch {
-                // silent
-              } finally {
-                setWithdrawing(false);
-              }
-            }}
-            disabled={withdrawing || !lulo?.balance}
-            className="text-[10px] px-2 py-0.5 rounded-md bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 font-semibold transition-colors shadow-sm"
-          >
-            {withdrawing ? "Withdrawing..." : "Withdraw"}
-          </button>
+          <div className="flex gap-1.5 mt-1.5">
+            <button
+              onClick={async () => {
+                setRebalancing(true);
+                try {
+                  await fetch("/api/agent/treasurer", { method: "POST" });
+                  fetchBalances();
+                } catch {
+                  // silent
+                } finally {
+                  setRebalancing(false);
+                }
+              }}
+              disabled={rebalancing}
+              className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300 font-semibold transition-colors shadow-sm"
+            >
+              {rebalancing ? "Rebalancing..." : "Rebalance"}
+            </button>
+            <button
+              onClick={async () => {
+                setWithdrawing(true);
+                try {
+                  await fetch("/api/lulo/withdraw", { method: "POST" });
+                  fetchBalances();
+                } catch {
+                  // silent
+                } finally {
+                  setWithdrawing(false);
+                }
+              }}
+              disabled={withdrawing || !lulo?.balance}
+              className="text-[10px] px-2 py-0.5 rounded-md bg-red-500 text-white hover:bg-red-600 disabled:bg-gray-300 font-semibold transition-colors shadow-sm"
+            >
+              {withdrawing ? "Withdrawing..." : "Withdraw"}
+            </button>
+          </div>
         </div>
       </div>
 

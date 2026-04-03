@@ -7,7 +7,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const { chain } = body;
+  const { chain, price: requestedPrice } = body;
 
   const store = readStore();
   const product = store.inventory.find((i) => i.id === id);
@@ -29,15 +29,18 @@ export async function POST(
   const paymentAddress =
     chain === "solana" ? solanaAddress : evmAddress;
 
+  // Use negotiated price if provided — trust the seller agent's negotiation
+  const finalPrice = (requestedPrice && requestedPrice > 0) ? requestedPrice : product.maxPrice;
+
   return Response.json({
     product: {
       id: product.id,
       name: product.name,
-      price: product.maxPrice,
+      price: finalPrice,
     },
     payment: {
       address: paymentAddress,
-      amount: product.maxPrice,
+      amount: finalPrice,
       currency: "USDC",
       chain: chain || "base",
       x402Url: `/api/x402/${product.id}`,

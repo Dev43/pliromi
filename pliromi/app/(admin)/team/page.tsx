@@ -17,6 +17,7 @@ interface TeamMember {
   role: string;
   apiKeyId?: string;
   policy?: PolicyRules;
+  spentToday?: number;
 }
 
 const DEFAULT_POLICY: PolicyRules = {
@@ -147,20 +148,41 @@ function PolicyBadge({ policy }: { policy: PolicyRules }) {
   );
 }
 
-function PolicyDisplay({ policy }: { policy: PolicyRules }) {
+function PolicyDisplay({ policy, spentToday }: { policy: PolicyRules; spentToday: number }) {
+  const spendPct = policy.dailySpendLimit > 0
+    ? Math.min((spentToday / policy.dailySpendLimit) * 100, 100)
+    : 0;
+  const isNearLimit = spendPct >= 80;
+  const isOverLimit = spendPct >= 100;
+
   return (
-    <div className="grid grid-cols-3 gap-3 text-xs">
-      <div>
-        <span className="text-gray-400 block">Max/Tx</span>
-        <span className="text-gray-700 font-medium">${policy.maxTransactionAmount.toLocaleString()}</span>
+    <div className="space-y-2">
+      <div className="grid grid-cols-4 gap-3 text-xs">
+        <div>
+          <span className="text-gray-400 block">Max/Tx</span>
+          <span className="text-gray-700 font-medium">${policy.maxTransactionAmount.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">Daily Limit</span>
+          <span className="text-gray-700 font-medium">${policy.dailySpendLimit.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">Spent Today</span>
+          <span className={`font-medium ${isOverLimit ? "text-red-600" : isNearLimit ? "text-amber-600" : "text-emerald-600"}`}>
+            ${spentToday.toFixed(2)}
+          </span>
+        </div>
+        <div>
+          <span className="text-gray-400 block">Chains</span>
+          <span className="text-gray-700 font-medium">{policy.allowedChains.join(", ")}</span>
+        </div>
       </div>
-      <div>
-        <span className="text-gray-400 block">Daily Limit</span>
-        <span className="text-gray-700 font-medium">${policy.dailySpendLimit.toLocaleString()}</span>
-      </div>
-      <div>
-        <span className="text-gray-400 block">Chains</span>
-        <span className="text-gray-700 font-medium">{policy.allowedChains.join(", ")}</span>
+      {/* Spend progress bar */}
+      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${isOverLimit ? "bg-red-500" : isNearLimit ? "bg-amber-400" : "bg-emerald-400"}`}
+          style={{ width: `${spendPct}%` }}
+        />
       </div>
     </div>
   );
@@ -587,7 +609,7 @@ export default function TeamPage() {
                   </div>
                 </div>
                 <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
-                  <PolicyDisplay policy={policy} />
+                  <PolicyDisplay policy={policy} spentToday={member.spentToday || 0} />
                 </div>
               </div>
             );

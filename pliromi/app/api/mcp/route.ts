@@ -17,14 +17,36 @@ async function handleMcpRequest(request: Request) {
   return response;
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-PAYMENT, x-payment",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(request: Request) {
-  return handleMcpRequest(request);
+  const response = await handleMcpRequest(request);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    response.headers.set(k, v);
+  }
+  return response;
 }
 
 export async function GET(request: Request) {
-  return handleMcpRequest(request);
+  const response = await handleMcpRequest(request);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    response.headers.set(k, v);
+  }
+  return response;
 }
 
 export async function DELETE(request: Request) {
-  return handleMcpRequest(request);
+  const response = await handleMcpRequest(request);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    response.headers.set(k, v);
+  }
+  return response;
 }

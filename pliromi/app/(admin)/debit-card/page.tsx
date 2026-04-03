@@ -20,7 +20,7 @@ interface TeamMember {
   role: string;
 }
 
-const PRESET_AMOUNTS = [25, 50, 100, 250, 500];
+const PRESET_AMOUNTS = [5, 10, 15, 20, 25];
 
 function CardVisual({
   card,
@@ -45,13 +45,12 @@ function CardVisual({
 
   return (
     <div
-      className={`relative rounded-2xl p-5 text-white overflow-hidden h-48 flex flex-col justify-between ${
-        isRevoked
+      className={`relative rounded-2xl p-5 text-white overflow-hidden h-48 flex flex-col justify-between ${isRevoked
           ? "bg-gradient-to-br from-gray-400 to-gray-500"
           : isDepleted
             ? "bg-gradient-to-br from-amber-400 to-amber-600"
             : "bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700"
-      }`}
+        }`}
     >
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-10">
@@ -159,22 +158,20 @@ function OrderCardModal({
                 <button
                   key={preset}
                   onClick={() => { setAmount(preset); setUseCustom(false); }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                    !useCustom && amount === preset
+                  className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${!useCustom && amount === preset
                       ? "bg-emerald-50 border-emerald-300 text-emerald-700"
                       : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   ${preset}
                 </button>
               ))}
               <button
                 onClick={() => setUseCustom(true)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  useCustom
+                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${useCustom
                     ? "bg-emerald-50 border-emerald-300 text-emerald-700"
                     : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 Custom
               </button>

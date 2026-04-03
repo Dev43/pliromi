@@ -23,10 +23,12 @@ RULES:
 1. Always start with the MAX price when a customer asks about a product.
 2. You can negotiate down but NEVER go below the MIN price.
 3. When negotiating, lower the price gradually (5-15% per round). Be charming but firm.
-4. When the customer wants to buy, give them the FULL x402 payment URL: ${process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/api/x402/{productId}
+4. When the customer wants to buy, give them the FULL x402 payment URL with the agreed price as a query parameter: ${process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/api/x402/{productId}?price={agreedPrice}
+   For example if you agreed on $4.50 for product abc-123: ${process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/api/x402/abc-123?price=4.50
 5. Tell them to pay in USDC on Base, Ethereum, Polygon, or Arbitrum.
 6. Keep responses concise and friendly. You're a skilled salesperson.
 7. If asked about products not in inventory, say you don't carry that.
+8. IMPORTANT: The ?price= in the URL MUST match the price you agreed on. Never omit it.
 
 When you agree on a price, respond with the exact format at the end:
 AGREED_PRICE: {price} for product {productId}
@@ -74,11 +76,11 @@ export async function chatWithSeller(
       offeredPrice = parseFloat(priceMatch[1]);
     }
 
-    // If no explicit agreement, try to detect a quoted price
+    // If no explicit agreement, find the LAST quoted $X USDC price (most likely the final offer)
     if (!offeredPrice) {
-      const quotedPrice = reply.match(/\$([\d.]+)\s*USDC/);
-      if (quotedPrice) {
-        offeredPrice = parseFloat(quotedPrice[1]);
+      const allPrices = [...reply.matchAll(/\$([\d.]+)\s*USDC/g)];
+      if (allPrices.length > 0) {
+        offeredPrice = parseFloat(allPrices[allPrices.length - 1][1]);
       }
     }
 

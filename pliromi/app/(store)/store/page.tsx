@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import ProductCard from "@/components/ProductCard";
+import PaymentModal from "@/components/PaymentModal";
 
 interface Product {
   id: string;
@@ -54,6 +55,9 @@ function SellerChat({ products }: { products: Product[] }) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [negotiatedPrice, setNegotiatedPrice] = useState<number | null>(null);
+  const [negotiatedProductId, setNegotiatedProductId] = useState<string | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +78,10 @@ function SellerChat({ products }: { products: Product[] }) {
       ]);
     }
   }, [open, messages.length, products]);
+
+  const negotiatedProduct = negotiatedProductId
+    ? products.find((p) => p.id === negotiatedProductId)
+    : null;
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +105,12 @@ function SellerChat({ products }: { products: Product[] }) {
         ...prev,
         { role: "assistant", content: data.reply || "Sorry, I couldn't process that." },
       ]);
+
+      // Track the latest negotiated price
+      if (data.offeredPrice && data.offeredPrice > 0) {
+        setNegotiatedPrice(data.offeredPrice);
+        setNegotiatedProductId(data.productId || null);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -174,6 +188,25 @@ function SellerChat({ products }: { products: Product[] }) {
             <div ref={bottomRef} />
           </div>
 
+          {/* Negotiated price banner */}
+          {negotiatedPrice && negotiatedProduct && (
+            <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 flex items-center justify-between flex-shrink-0">
+              <div className="text-xs">
+                <span className="text-amber-700 font-medium">{negotiatedProduct.name}</span>
+                <span className="text-amber-600 ml-1">
+                  <span className="line-through text-gray-400">${negotiatedProduct.price.toFixed(2)}</span>
+                  {" "}${negotiatedPrice.toFixed(2)} USDC
+                </span>
+              </div>
+              <button
+                onClick={() => setShowPayment(true)}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                Buy Now
+              </button>
+            </div>
+          )}
+
           {/* Input */}
           <form onSubmit={send} className="p-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
             <input
@@ -192,6 +225,14 @@ function SellerChat({ products }: { products: Product[] }) {
             </button>
           </form>
         </div>
+      )}
+
+      {showPayment && negotiatedProduct && (
+        <PaymentModal
+          product={negotiatedProduct}
+          onClose={() => setShowPayment(false)}
+          negotiatedPrice={negotiatedPrice || undefined}
+        />
       )}
     </>
   );
