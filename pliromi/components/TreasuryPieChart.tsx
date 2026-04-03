@@ -176,33 +176,31 @@ export default function TreasuryPieChart() {
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
       <h2 className="text-lg font-semibold text-gray-900 mb-3">Allocation</h2>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-shrink-0">
-          <PieChart slices={slices} />
-        </div>
+      <div className="flex justify-center mb-4">
+        <PieChart slices={slices} />
+      </div>
 
-        <div className="flex-1 space-y-1.5">
-          {slices.map((slice) => (
-            <div key={slice.label} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: slice.color }}
-                />
-                <span className="text-gray-700 font-medium">{slice.label}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">${slice.value.toFixed(2)}</span>
-                <span className="text-gray-900 font-semibold w-12 text-right">
-                  {slice.percentage.toFixed(1)}%
-                </span>
-              </div>
+      <div className="space-y-2">
+        {slices.map((slice) => (
+          <div key={slice.label} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: slice.color }}
+              />
+              <span className="text-gray-700 font-medium truncate">{slice.label}</span>
             </div>
-          ))}
-          <div className="border-t border-gray-100 pt-1.5 flex items-center justify-between text-xs">
-            <span className="text-gray-500 font-medium">Total</span>
-            <span className="text-gray-900 font-bold">${total.toFixed(2)}</span>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+              <span className="text-gray-500">${slice.value.toFixed(2)}</span>
+              <span className="text-gray-900 font-semibold w-10 text-right">
+                {slice.percentage.toFixed(0)}%
+              </span>
+            </div>
           </div>
+        ))}
+        <div className="border-t border-gray-100 pt-2 mt-2 flex items-center justify-between text-xs">
+          <span className="text-gray-500 font-medium">Total</span>
+          <span className="text-gray-900 font-bold">${total.toFixed(2)}</span>
         </div>
       </div>
     </div>

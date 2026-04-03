@@ -2,20 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
+import MoonPayAccount from "@/components/MoonPayAccount";
 import WalletBalances from "@/components/WalletBalances";
 import Inventory from "@/components/Inventory";
 import TreasuryPieChart from "@/components/TreasuryPieChart";
 import ActivityLog from "@/components/ActivityLog";
-
-const XmtpChat = dynamic(() => import("@/components/XmtpChat"), {
-  ssr: false,
-  loading: () => (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 text-center text-gray-400 py-8">
-      Loading XMTP...
-    </div>
-  ),
-});
 
 interface OrgData {
   name: string;
@@ -50,24 +41,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-[1400px] mx-auto px-4 py-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{org?.name}</h1>
         <p className="text-gray-500 text-sm">{org?.description}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+        {/* Col 1: MoonPay Account */}
+        <div className="lg:col-span-1">
+          <MoonPayAccount />
+        </div>
+
+        {/* Col 2: Store Treasury */}
         <div className="lg:col-span-1">
           <WalletBalances />
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
+        {/* Col 3: Inventory + Allocation */}
+        <div className="lg:col-span-1 space-y-5">
           <Inventory />
           <TreasuryPieChart />
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
-          <XmtpChat />
+        {/* Col 4: Activity */}
+        <div className="lg:col-span-1 space-y-5">
           <ActivityLog />
         </div>
       </div>

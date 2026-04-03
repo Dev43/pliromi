@@ -217,8 +217,66 @@ export async function getBalances(): Promise<WalletAccount[]> {
     });
   }
 
+  // Sort: Base, Solana, Sui first, then the rest
+  const PRIORITY_ORDER = ["Base", "Solana", "Sui"];
+  enrichedAccounts.sort((a, b) => {
+    const aIdx = PRIORITY_ORDER.indexOf(a.chainName);
+    const bIdx = PRIORITY_ORDER.indexOf(b.chainName);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return 0;
+  });
+
   balanceCache = { data: enrichedAccounts, timestamp: Date.now() };
   return enrichedAccounts;
+}
+
+// Fetch balances for an arbitrary EVM + Solana address set
+export async function getBalancesForAddresses(addresses: Record<string, string>): Promise<
+  Record<string, { native: string; usdc: string; nativeSymbol: string }>
+> {
+  const results: Record<string, { native: string; usdc: string; nativeSymbol: string }> = {};
+  const evmAddress = addresses["ethereum"] || addresses["base"] || addresses["polygon"];
+
+  const promises: Promise<void>[] = [];
+
+  // EVM chains
+  for (const [chain, config] of Object.entries(USDC_CONTRACTS)) {
+    const addr = addresses[chain] || evmAddress;
+    if (!addr) continue;
+    promises.push(
+      (async () => {
+        try {
+          const [native, usdc] = await Promise.all([
+            withTimeout(getEvmBalance(config.rpc, addr, config.chainId), RPC_TIMEOUT),
+            withTimeout(getEvmUsdcBalance(config.rpc, config.address, addr, config.decimals, config.chainId), RPC_TIMEOUT),
+          ]);
+          const token = chain === "polygon" ? "MATIC" : "ETH";
+          results[chain] = { native, usdc, nativeSymbol: token };
+        } catch {
+          results[chain] = { native: "0", usdc: "0", nativeSymbol: chain === "polygon" ? "MATIC" : "ETH" };
+        }
+      })()
+    );
+  }
+
+  // Solana
+  if (addresses["solana"]) {
+    promises.push(
+      (async () => {
+        try {
+          const sol = await withTimeout(fetchSolanaBalances(addresses["solana"]), RPC_TIMEOUT);
+          results["solana"] = { ...sol, nativeSymbol: "SOL" };
+        } catch {
+          results["solana"] = { native: "0", usdc: "0", nativeSymbol: "SOL" };
+        }
+      })()
+    );
+  }
+
+  await Promise.allSettled(promises);
+  return results;
 }
 
 // Policy & API Key management

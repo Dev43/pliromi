@@ -1,5 +1,6 @@
 // Server-side XMTP client for agents to post to the group chat
-import { readStore } from "@/lib/db";
+import { readStore, updateStore } from "@/lib/db";
+import { GROUP_NAME, GROUP_DESCRIPTION } from "@/lib/xmtp";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let agentClient: any = null;
@@ -62,14 +63,57 @@ export async function getGroupConversation() {
   const client = await getAgentClient();
   if (!client) return null;
 
+  await client.conversations.sync();
+
   const store = readStore();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const groupId = (store as any).xmtpGroupId;
-  if (!groupId) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let group: any = null;
 
-  await client.conversations.sync();
-  const group = await client.conversations.getConversationById(groupId);
-  if (!group) return null;
+  // Try to find existing group by stored ID
+  if (groupId) {
+    try {
+      group = await client.conversations.getConversationById(groupId);
+    } catch {
+      // Not found
+    }
+  }
+
+  // Fallback: scan conversations for group with matching name
+  if (!group) {
+    try {
+      const allConvos = await client.conversations.list();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      group = allConvos.find((c: any) => c.name === GROUP_NAME) || null;
+    } catch {
+      // List failed
+    }
+  }
+
+  // Create new group if none exists
+  if (!group) {
+    try {
+      group = await client.conversations.createGroup([], {
+        groupName: GROUP_NAME,
+        groupDescription: GROUP_DESCRIPTION,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateStore((s: any) => { s.xmtpGroupId = group.id; });
+      await group.sendText(`${GROUP_NAME} group chat created. Agents will post updates here.`);
+      console.log("[XMTP Agent] Created new group:", group.id);
+    } catch (error) {
+      console.error("[XMTP Agent] Failed to create group:", error);
+      return null;
+    }
+  } else {
+    // Keep stored ID in sync
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (group.id !== groupId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateStore((s: any) => { s.xmtpGroupId = group.id; });
+    }
+  }
 
   await group.sync();
   return group;

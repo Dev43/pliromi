@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { FundStoreModal } from "./MoonPayAccount";
 
 interface WalletAccount {
   chainId: string;
@@ -32,11 +33,16 @@ const DEPOSIT_CHAINS = ["solana", "ethereum", "base", "polygon", "arbitrum"] as 
 // Source chains: senders can deposit from these chains (auto-converted to USDC)
 const SOURCE_CHAINS = ["Solana", "Ethereum", "Bitcoin", "Tron"] as const;
 
+interface DepositWallet {
+  address: string;
+  chain: string;
+  qrCode: string;
+}
+
 interface DepositResult {
   depositUrl?: string;
-  addresses?: Record<string, string>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  raw?: any;
+  wallets?: DepositWallet[];
+  instructions?: string;
 }
 
 function FundModal({
@@ -144,12 +150,11 @@ function FundModal({
 
           {/* Deposit result */}
           {deposit && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
-              <p className="text-xs font-semibold text-emerald-800">Deposit created!</p>
-
+            <div className="space-y-3">
+              {/* Deposit link */}
               {deposit.depositUrl && (
-                <div>
-                  <p className="text-[10px] text-emerald-600 mb-1">Deposit Link</p>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                  <p className="text-[10px] font-medium text-emerald-600 mb-1">Deposit Link</p>
                   <a
                     href={deposit.depositUrl}
                     target="_blank"
@@ -161,24 +166,55 @@ function FundModal({
                 </div>
               )}
 
-              {deposit.addresses && Object.entries(deposit.addresses).map(([chain, addr]) => (
-                <div key={chain} className="flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-emerald-600 capitalize">{chain}</span>
-                    <button
-                      onClick={() => copyAddr(addr)}
-                      className="block text-xs font-mono text-emerald-800 hover:text-emerald-600 transition-colors"
-                    >
-                      {copiedAddr === addr ? "Copied!" : `${addr.slice(0, 12)}...${addr.slice(-6)}`}
-                    </button>
+              {/* Per-chain deposit addresses */}
+              {deposit.wallets && deposit.wallets.length > 0 && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                    <p className="text-xs font-semibold text-gray-700">Send to these addresses</p>
+                    <p className="text-[10px] text-gray-400">Any token on these chains will auto-convert to USDC</p>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {deposit.wallets.map((w) => {
+                      const icon = CHAIN_ICONS[w.chain.charAt(0).toUpperCase() + w.chain.slice(1)];
+                      return (
+                        <div key={w.chain} className="px-3 py-2.5 flex items-center gap-3">
+                          {icon ? (
+                            <img src={icon} alt={w.chain} className="w-6 h-6 rounded-full" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold text-gray-500 capitalize">
+                              {w.chain.slice(0, 2)}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-medium text-gray-700 capitalize">{w.chain}</span>
+                            <button
+                              onClick={() => copyAddr(w.address)}
+                              className="block text-[11px] font-mono text-gray-500 hover:text-emerald-600 transition-colors truncate w-full text-left"
+                              title={w.address}
+                            >
+                              {copiedAddr === w.address ? (
+                                <span className="text-emerald-600 font-sans">Copied!</span>
+                              ) : (
+                                w.address
+                              )}
+                            </button>
+                          </div>
+                          <a
+                            href={w.qrCode}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-300 hover:text-emerald-600 transition-colors flex-shrink-0"
+                            title="View QR code"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 0v3h1V4H5zM3 12a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 0v3h1v-3H5zM12 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm0 1h3v3h-3V4zM11 12a1 1 0 011-1h1v1h-1v1h1v-1h1v1h1v-1h1v1h-1v1h1v1h-1v-1h-1v1h-1v-1h-1v-1h1v-1h-1v-1z" clipRule="evenodd" />
+                            </svg>
+                          </a>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-
-              {deposit.raw && !deposit.depositUrl && !deposit.addresses && (
-                <pre className="text-[10px] text-emerald-700 whitespace-pre-wrap break-all">
-                  {typeof deposit.raw === "string" ? deposit.raw : JSON.stringify(deposit.raw, null, 2)}
-                </pre>
               )}
             </div>
           )}
@@ -251,6 +287,8 @@ export default function WalletBalances() {
   const [qrAccount, setQrAccount] = useState<WalletAccount | null>(null);
   const [fundAccount, setFundAccount] = useState<WalletAccount | null>(null);
   const [lulo, setLulo] = useState<LuloPosition | null>(null);
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [moonpayAddresses, setMoonpayAddresses] = useState<Record<string, string>>({});
 
   const fetchBalances = useCallback(async () => {
     try {
@@ -288,7 +326,7 @@ export default function WalletBalances() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Treasury</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Store Treasury</h2>
         <button
           onClick={() => { setLoading(true); fetchBalances(); }}
           className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
@@ -297,10 +335,27 @@ export default function WalletBalances() {
         </button>
       </div>
 
-      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-4 mb-5 text-white">
+      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-4 mb-4 text-white">
         <div className="text-xs uppercase tracking-wide font-medium opacity-80">Total USDC</div>
         <div className="text-3xl font-bold mt-0.5">${totalUsdc}</div>
       </div>
+
+      <button
+        onClick={async () => {
+          try {
+            const res = await fetch("/api/moonpay/wallets");
+            const data = await res.json();
+            const w = Array.isArray(data.wallets) && data.wallets[0];
+            if (w?.addresses) {
+              setMoonpayAddresses(w.addresses);
+              setShowFundModal(true);
+            }
+          } catch { /* no moonpay wallet */ }
+        }}
+        className="w-full py-2 mb-4 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-medium rounded-lg border border-purple-200 transition-colors"
+      >
+        Fund Store Treasury with MoonPay
+      </button>
 
       {/* Lulo Protected Vault */}
       <div className="rounded-xl p-3 border border-emerald-200 bg-emerald-50/50 mb-3">
@@ -425,6 +480,13 @@ export default function WalletBalances() {
         <FundModal
           account={fundAccount}
           onClose={() => setFundAccount(null)}
+        />
+      )}
+
+      {showFundModal && (
+        <FundStoreModal
+          moonpayAddresses={moonpayAddresses}
+          onClose={() => setShowFundModal(false)}
         />
       )}
     </div>
