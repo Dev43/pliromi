@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "skills": {
+    "moonpay-auth": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "7078f11f8800968b2548eab3f63566eae84758ba58fbc307a294a049019b6836"
+    },
+    "moonpay-buy-crypto": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "c2c6c58df488b1f1a87c010b23d9bea245a8ec59e1e114a88f4636bb4009a2d4"
+    },
+    "moonpay-check-wallet": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "50fe1f925ad449d9ac8d9a9396f62ceafcee239c8c804ade53a8332e4d83a977"
+    },
+    "moonpay-commerce": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "1e002371946e7b0005180d40d9db9105a31cc903dd55a2ac6b7763413e151c1b"
+    },
+    "moonpay-deposit": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "1061f99a13906b4c4710822583bdbfbfda7a1a447effbd7be284fee596db0462"
+    },
+    "moonpay-mcp": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "3fc7a2e39d22d2433227a015f0d2158f4ec46573137da84aaf967ee609254959"
+    },
+    "moonpay-swap-tokens": {
+      "source": "moonpay/skills",
+      "sourceType": "github",
+      "computedHash": "3fe68736a36b968dd227e883fd5f1267723da28db5ffef7ae61e727870771eee"
+    }
+  }
+}
