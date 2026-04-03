@@ -59,9 +59,13 @@ function SellerChat({ products }: { products: Product[] }) {
   const [negotiatedProductId, setNegotiatedProductId] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   // Greet on first open
@@ -161,7 +165,7 @@ function SellerChat({ products }: { products: Product[] }) {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2">
             {messages.map((msg, i) => (
               <div
                 key={i}

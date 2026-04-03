@@ -38,8 +38,13 @@ export default function XmtpChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<{ end: () => Promise<unknown> } | null>(null);
 
+  const xmtpContainerRef = useRef<HTMLDivElement>(null);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = xmtpContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -374,7 +379,7 @@ export default function XmtpChat() {
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-1.5 mb-3">
+      <div ref={xmtpContainerRef} className="flex-1 overflow-y-auto space-y-1.5 mb-3">
         {messages.length === 0 ? (
           <div className="text-center text-gray-400 text-sm py-4">
             No messages yet. Say hello!

@@ -24,12 +24,21 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
 
+  // Only auto-scroll if user is already near the bottom
   useEffect(() => {
-    scrollToBottom();
+    if (isNearBottomRef.current) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   const fetchMessages = useCallback(async () => {
@@ -194,7 +203,16 @@ export default function ChatWidget() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
+          <div
+            ref={messagesContainerRef}
+            onScroll={() => {
+              const el = messagesContainerRef.current;
+              if (el) {
+                isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+              }
+            }}
+            className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50"
+          >
             {messages.length === 0 ? (
               <div className="text-center text-gray-400 text-xs py-8">
                 No messages yet

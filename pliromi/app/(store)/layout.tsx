@@ -35,18 +35,22 @@ export default function StoreLayout({
       </header>
       <main className="flex-1">{children}</main>
       <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm py-3">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-center gap-3 text-xs text-gray-400">
           <span>Powered by</span>
-          <a href="https://openwallet.sh" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
+          <a href="https://openwallet.sh" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-50 hover:opacity-90">
             <img src="/ows-logo.svg" alt="OWS" className="h-5 inline-block" />
           </a>
           <span className="text-gray-300">·</span>
-          <a href="https://xmtp.org" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
-            <img src="/xmtp_logo.png" alt="XMTP" className="h-5 inline-block" />
+          <a href="https://xmtp.org" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-50 hover:opacity-90">
+            <img src="/xmtp-logo.svg" alt="XMTP" className="h-5 inline-block" />
           </a>
           <span className="text-gray-300">·</span>
-          <a href="https://moonpay.com" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-40 hover:opacity-70">
-            <img src="/moonpay_logo.png" alt="MoonPay" className="h-5 inline-block" />
+          <a href="https://moonpay.com" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-50 hover:opacity-90">
+            <img src="/moonpay-logo.svg" alt="MoonPay" className="h-5 inline-block" />
+          </a>
+          <span className="text-gray-300">·</span>
+          <a href="https://lulo.fi" target="_blank" rel="noopener noreferrer" className="transition-opacity opacity-50 hover:opacity-90">
+            <img src="/lulo-logo.svg" alt="Lulo" className="h-5 inline-block" />
           </a>
         </div>
       </footer>

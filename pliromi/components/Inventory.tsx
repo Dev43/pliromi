@@ -204,8 +204,13 @@ export default function Inventory() {
                       className="w-10 h-10 rounded object-cover shrink-0 border border-gray-200"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <span className="text-sm font-bold text-emerald-300">
+                    <div
+                      className="w-10 h-10 rounded flex items-center justify-center shrink-0 overflow-hidden"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${[...item.name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 70%, 85%), hsl(${([...item.name].reduce((a, c) => a + c.charCodeAt(0), 0) + 40) % 360}, 70%, 80%))`,
+                      }}
+                    >
+                      <span className="text-base font-black text-white/80 drop-shadow-sm">
                         {item.name.charAt(0).toUpperCase()}
                       </span>
                     </div>

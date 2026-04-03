@@ -89,6 +89,272 @@ async function depositToLulo(solanaAddress: string, amountUsdc: number): Promise
   }
 }
 
+export async function executeLuloDeposit(amount: string): Promise<string> {
+  const accounts = await getBalances();
+  const solana = accounts.find((a) => a.chainName === "Solana");
+  if (!solana) return "No Solana wallet found.";
+
+  const amountNum = parseFloat(amount);
+  if (isNaN(amountNum) || amountNum <= 0) return "Invalid amount.";
+
+  const solUsdc = parseFloat(solana.usdcBalance || "0");
+  if (solUsdc < amountNum) {
+    return `Insufficient Solana USDC balance ($${solUsdc.toFixed(2)}) to deposit $${amountNum.toFixed(2)}. Bridge USDC to Solana first.`;
+  }
+
+  const solNative = parseFloat(solana.nativeBalance || "0");
+  if (solNative < 0.01) {
+    return `Not enough SOL for gas (${solNative.toFixed(4)} SOL, need 0.01). Fund SOL to ${solana.address} first.`;
+  }
+
+  const success = await depositToLulo(solana.address, amountNum);
+  return success
+    ? `Deposited $${amountNum.toFixed(2)} USDC to Lulo Protected Vault.`
+    : `Lulo deposit of $${amountNum.toFixed(2)} failed. Check agent logs for details.`;
+}
+
+export async function executeLuloWithdraw(): Promise<string> {
+  const { getWalletAccounts } = await import("@/lib/wallet");
+  const accounts = await getWalletAccounts();
+  const solanaAddr = accounts.find((a) => a.chainId.includes("solana"))?.address;
+  if (!solanaAddr) return "No Solana wallet found.";
+
+  const luloHeaders = { "x-api-key": process.env.LULO_API_KEY || "", "Content-Type": "application/json" };
+
+  const accountRes = await fetch(`https://api.lulo.fi/v1/account.getAccount?owner=${solanaAddr}`, { headers: luloHeaders });
+  if (!accountRes.ok) return "Failed to fetch Lulo account.";
+
+  const accountData = await accountRes.json();
+  const protectedBalance = accountData?.pusdUsdBalance || 0;
+  if (protectedBalance <= 0) return "No balance in Lulo to withdraw.";
+
+  addAgentLog("treasurer", `Withdrawing $${protectedBalance.toFixed(2)} USDC from Lulo...`);
+
+  const withdrawRes = await fetch("https://api.lulo.fi/v1/generate.transactions.withdrawProtected", {
+    method: "POST",
+    headers: luloHeaders,
+    body: JSON.stringify({
+      owner: solanaAddr,
+      mintAddress: USDC_MINT,
+      amount: protectedBalance,
+      referrer: "3Cuk2L5YARBmtP5yMYMa6Duhn7dkhL7DXcsAGx4KVRUm",
+    }),
+  });
+
+  if (!withdrawRes.ok) {
+    const err = await withdrawRes.text();
+    return `Lulo withdraw failed: ${err}`;
+  }
+
+  const withdrawData = await withdrawRes.json();
+  const txBase64 = withdrawData.transaction;
+  if (!txBase64) return "Lulo returned no transaction data.";
+
+  const txHex = Buffer.from(txBase64, "base64").toString("hex");
+  const result = signAndSend("hackathon", "solana", txHex, undefined, undefined, SOLANA_RPC);
+
+  updateStore((s) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (s as any).lulo = { balance: 0, apy: (s as any).lulo?.apy || 4.5, lastUpdated: new Date().toISOString() };
+  });
+
+  const msg = `Withdrew $${protectedBalance.toFixed(2)} USDC from Lulo Protected Vault. Tx: ${result.txHash}`;
+  addAgentLog("treasurer", msg);
+  return msg;
+}
+
+const RPC_URLS: Record<number, string> = {
+  8453: "https://mainnet.base.org",
+  1: "https://eth.llamarpc.com",
+  137: "https://polygon-rpc.com",
+  42161: "https://arb1.arbitrum.io/rpc",
+};
+
+export async function executeBridge(params: {
+  fromChain: string;
+  toChain: string;
+  amount: string;
+  token: "usdc" | "native";
+}): Promise<string> {
+  const accounts = await getBalances();
+  const fromName = params.fromChain.charAt(0).toUpperCase() + params.fromChain.slice(1);
+  const toName = params.toChain.charAt(0).toUpperCase() + params.toChain.slice(1);
+
+  const sourceAccount = accounts.find(
+    (a) => a.chainName.toLowerCase() === params.fromChain.toLowerCase()
+  );
+  if (!sourceAccount) {
+    return `No wallet account found for chain: ${fromName}`;
+  }
+
+  const destAccount = accounts.find(
+    (a) => a.chainName.toLowerCase() === params.toChain.toLowerCase()
+  );
+  const recipient = destAccount?.address;
+  if (!recipient) {
+    return `No wallet account found for destination chain: ${toName}`;
+  }
+
+  addAgentLog("treasurer", `Bridging ${params.amount} ${params.token.toUpperCase()} from ${fromName} to ${toName}...`);
+
+  try {
+    const quote = await getRelayQuote({
+      user: sourceAccount.address,
+      fromChain: params.fromChain.toLowerCase(),
+      toChain: params.toChain.toLowerCase(),
+      token: params.token,
+      amount: params.amount,
+      recipient,
+    });
+
+    const txItems: Array<{ stepId: string; data: { to: string; data: string; value: string; chainId: number } }> = [];
+    for (const step of quote.steps || []) {
+      for (const item of step.items || []) {
+        if (step.kind === "transaction" && item.data) {
+          txItems.push({ stepId: step.id, data: item.data });
+        }
+      }
+    }
+
+    if (txItems.length === 0) {
+      return "Relay returned no transactions to execute. The bridge may not be supported for this route.";
+    }
+
+    addAgentLog("treasurer", `Relay bridge: ${txItems.length} transaction(s) to execute`);
+    const results: string[] = [];
+
+    for (let i = 0; i < txItems.length; i++) {
+      const txItem = txItems[i];
+      const rpcUrl = RPC_URLS[txItem.data.chainId] || "https://mainnet.base.org";
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+      const [nonce, feeData] = await Promise.all([
+        provider.getTransactionCount(sourceAccount.address, "pending"),
+        provider.getFeeData(),
+      ]);
+
+      const maxFee = (feeData.maxFeePerGas || 1_000_000_000n) * 3n / 2n;
+      const maxPriority = (feeData.maxPriorityFeePerGas || 100_000_000n) * 3n / 2n;
+
+      const tx = ethers.Transaction.from({
+        type: 2,
+        chainId: txItem.data.chainId,
+        nonce,
+        to: txItem.data.to,
+        data: txItem.data.data,
+        value: BigInt(txItem.data.value || "0"),
+        gasLimit: 300_000n,
+        maxFeePerGas: maxFee,
+        maxPriorityFeePerGas: maxPriority,
+      });
+
+      const unsignedRaw = tx.unsignedSerialized.slice(2);
+      const result = signAndSend("hackathon", "evm", unsignedRaw, undefined, undefined, rpcUrl);
+      results.push(result.txHash);
+
+      addAgentLog("treasurer", `Bridge tx ${i + 1}/${txItems.length} submitted: ${result.txHash}`);
+
+      if (i < txItems.length - 1) {
+        const receipt = await provider.waitForTransaction(result.txHash, 1, 60_000);
+        if (!receipt || receipt.status !== 1) {
+          return `Bridge tx ${i + 1} failed on-chain (${result.txHash}). Remaining steps aborted.`;
+        }
+      }
+    }
+
+    const msg = `Bridge complete! ${params.amount} ${params.token.toUpperCase()} from ${fromName} → ${toName}. Tx: ${results[results.length - 1]}`;
+    addAgentLog("treasurer", msg);
+    return msg;
+  } catch (err) {
+    const errMsg = `Bridge failed: ${err instanceof Error ? err.message : "Unknown error"}`;
+    addAgentLog("treasurer", errMsg);
+    return errMsg;
+  }
+}
+
+export async function executeSend(params: {
+  chain: string;
+  token: "usdc" | "native";
+  amount: string;
+  to: string;
+}): Promise<string> {
+  const accounts = await getBalances();
+  const chainName = params.chain.charAt(0).toUpperCase() + params.chain.slice(1);
+  const sourceAccount = accounts.find(
+    (a) => a.chainName.toLowerCase() === params.chain.toLowerCase()
+  );
+  if (!sourceAccount) {
+    return `No wallet account found for chain: ${chainName}`;
+  }
+
+  addAgentLog("treasurer", `Sending ${params.amount} ${params.token.toUpperCase()} on ${chainName} to ${params.to}...`);
+
+  try {
+    const chainIds: Record<string, number> = { base: 8453, ethereum: 1, polygon: 137, arbitrum: 42161 };
+    const chainId = chainIds[params.chain.toLowerCase()];
+    if (!chainId) return `Unsupported chain for send: ${chainName}. Supported: Base, Ethereum, Polygon, Arbitrum.`;
+
+    const rpcUrl = RPC_URLS[chainId] || "https://mainnet.base.org";
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+    const [nonce, feeData] = await Promise.all([
+      provider.getTransactionCount(sourceAccount.address, "pending"),
+      provider.getFeeData(),
+    ]);
+
+    const maxFee = (feeData.maxFeePerGas || 1_000_000_000n) * 3n / 2n;
+    const maxPriority = (feeData.maxPriorityFeePerGas || 100_000_000n) * 3n / 2n;
+
+    let txData: string;
+    let txTo: string;
+    let txValue: bigint;
+
+    if (params.token === "usdc") {
+      const usdcAddresses: Record<string, string> = {
+        base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        ethereum: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        polygon: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+        arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      };
+      const usdcAddr = usdcAddresses[params.chain.toLowerCase()];
+      if (!usdcAddr) return `No USDC contract for ${chainName}`;
+
+      const iface = new ethers.Interface(["function transfer(address to, uint256 amount)"]);
+      const amountUnits = BigInt(Math.floor(parseFloat(params.amount) * 1_000_000));
+      txData = iface.encodeFunctionData("transfer", [params.to, amountUnits]);
+      txTo = usdcAddr;
+      txValue = 0n;
+    } else {
+      txData = "0x";
+      txTo = params.to;
+      txValue = ethers.parseEther(params.amount);
+    }
+
+    const tx = ethers.Transaction.from({
+      type: 2,
+      chainId,
+      nonce,
+      to: txTo,
+      data: txData,
+      value: txValue,
+      gasLimit: 100_000n,
+      maxFeePerGas: maxFee,
+      maxPriorityFeePerGas: maxPriority,
+    });
+
+    const unsignedRaw = tx.unsignedSerialized.slice(2);
+    const result = signAndSend("hackathon", "evm", unsignedRaw, undefined, undefined, rpcUrl);
+
+    const msg = `Sent ${params.amount} ${params.token.toUpperCase()} on ${chainName} to ${params.to}. Tx: ${result.txHash}`;
+    addAgentLog("treasurer", msg);
+    return msg;
+  } catch (err) {
+    const errMsg = `Send failed: ${err instanceof Error ? err.message : "Unknown error"}`;
+    addAgentLog("treasurer", errMsg);
+    return errMsg;
+  }
+}
+
 async function runTreasurer(): Promise<{
   totalUsdc: string;
   luloTarget: string;
@@ -413,8 +679,11 @@ CAPABILITIES:
 COMMANDS YOU RESPOND TO:
 - "status" or "report" — give a full treasury report
 - "rebalance" — check if Lulo is under target and take action
-- "bridge X USDC from [chain] to [chain]" — explain how you'd bridge
-- "deposit X to lulo" — explain the Lulo deposit process
+- "bridge X USDC from [chain] to [chain]" — use the bridge_tokens tool to execute
+- "send X USDC on [chain] to [address]" — use the send_tokens tool to execute
+- "deposit X to lulo" — use the deposit_to_lulo tool to execute
+- "withdraw from lulo" — use the withdraw_from_lulo tool to execute
+- "increase lulo to X%" or "put more in lulo" — calculate the needed amount and use deposit_to_lulo
 - Any other treasury question — answer helpfully
 
 RULES:
@@ -422,8 +691,70 @@ RULES:
 - If asked to rebalance, run the check and report what actions are needed.
 - If funds are insufficient, clearly explain what's missing and suggest funding the treasury.
 - Keep responses concise but informative. You're a professional treasury manager.
-- When the user asks you to rebalance, confirm what you will do before executing.`;
+- When the user asks to bridge or send, USE THE TOOLS to execute immediately. Do not just explain — take action.
+- Supported chains for bridge/send: base, ethereum, polygon, arbitrum, solana.
+- Always confirm the action result to the user.`;
 }
+
+const TREASURER_TOOLS: Anthropic.Messages.Tool[] = [
+  {
+    name: "bridge_tokens",
+    description: "Bridge/transfer tokens from one blockchain to another using Relay protocol. Supported chains: base, ethereum, polygon, arbitrum, solana.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        from_chain: { type: "string", description: "Source chain (e.g. 'base', 'ethereum', 'solana')" },
+        to_chain: { type: "string", description: "Destination chain (e.g. 'solana', 'base')" },
+        amount: { type: "string", description: "Amount to bridge (e.g. '1', '10.5')" },
+        token: { type: "string", enum: ["usdc", "native"], description: "Token to bridge: 'usdc' or 'native'" },
+      },
+      required: ["from_chain", "to_chain", "amount", "token"],
+    },
+  },
+  {
+    name: "send_tokens",
+    description: "Send tokens to an address on the same chain. Supported EVM chains: base, ethereum, polygon, arbitrum.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        chain: { type: "string", description: "Chain to send on (e.g. 'base', 'ethereum')" },
+        token: { type: "string", enum: ["usdc", "native"], description: "Token to send: 'usdc' or 'native'" },
+        amount: { type: "string", description: "Amount to send (e.g. '1', '0.5')" },
+        to: { type: "string", description: "Recipient address (0x...)" },
+      },
+      required: ["chain", "token", "amount", "to"],
+    },
+  },
+  {
+    name: "rebalance_treasury",
+    description: "Run a full treasury rebalance check — checks all balances and ensures Lulo Protected Vault is at target allocation.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "deposit_to_lulo",
+    description: "Deposit USDC from the Solana wallet into Lulo Protected Vault for yield farming. Requires USDC on Solana.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        amount: { type: "string", description: "Amount of USDC to deposit (e.g. '5', '10.5')" },
+      },
+      required: ["amount"],
+    },
+  },
+  {
+    name: "withdraw_from_lulo",
+    description: "Withdraw all USDC from Lulo Protected Vault back to the Solana wallet.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+];
 
 export async function chatWithTreasurer(
   message: string,
@@ -439,7 +770,7 @@ export async function chatWithTreasurer(
     treasuryData = {
       totalUsdc: totalUsdc.toFixed(2),
       luloTarget: (totalUsdc * luloPercent).toFixed(2),
-      luloPosition: "0.00", // Would come from Lulo API
+      luloPosition: "0.00",
       accounts,
     };
   } catch {
@@ -448,47 +779,90 @@ export async function chatWithTreasurer(
 
   const systemPrompt = buildTreasurerSystemPrompt(treasuryData);
 
-  // Check if user wants to trigger rebalance
-  const lowerMsg = message.toLowerCase();
-  if (lowerMsg.includes("rebalance") || lowerMsg === "run" || lowerMsg === "execute") {
-    try {
-      const result = await runTreasurer();
-      const actionReport = `I've run a treasury rebalance check.\n\nResults:\n- Total USDC: $${result.totalUsdc}\n- Lulo Target: $${result.luloTarget}\n- Lulo Position: $${result.luloPosition}\n\n`;
-
-      // Still send to Claude for a natural response
-      const messages: { role: "user" | "assistant"; content: string }[] = [
-        ...(history || []),
-        { role: "user" as const, content: `I asked you to rebalance. Here are the results of the rebalance run: ${actionReport}. Now respond to me about what happened and what actions were taken or still needed. Original message: "${message}"` },
-      ];
-
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 400,
-        system: systemPrompt,
-        messages,
-      });
-
-      return response.content[0].type === "text" ? response.content[0].text : actionReport;
-    } catch (err) {
-      return `Rebalance failed: ${err instanceof Error ? err.message : "Unknown error"}`;
-    }
-  }
-
-  // Regular chat
-  const messages: { role: "user" | "assistant"; content: string }[] = [
-    ...(history || []),
+  const messages: Anthropic.Messages.MessageParam[] = [
+    ...(history || []).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user" as const, content: message },
   ];
 
   try {
-    const response = await anthropic.messages.create({
+    let response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 400,
+      max_tokens: 600,
       system: systemPrompt,
       messages,
+      tools: TREASURER_TOOLS,
     });
 
-    const reply = response.content[0].type === "text" ? response.content[0].text : "I couldn't process that request.";
+    // Tool use loop — execute tools and feed results back
+    const allMessages = [...messages];
+    let iterations = 0;
+    const MAX_ITERATIONS = 5;
+
+    while (response.stop_reason === "tool_use" && iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      // Add assistant response with tool calls
+      allMessages.push({ role: "assistant", content: response.content });
+
+      // Process each tool call
+      const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type !== "tool_use") continue;
+
+        let result: string;
+        const input = block.input as Record<string, string>;
+
+        if (block.name === "bridge_tokens") {
+          result = await executeBridge({
+            fromChain: input.from_chain,
+            toChain: input.to_chain,
+            amount: input.amount,
+            token: input.token as "usdc" | "native",
+          });
+          postToGroup("Treasurer", result).catch(() => {});
+        } else if (block.name === "send_tokens") {
+          result = await executeSend({
+            chain: input.chain,
+            token: input.token as "usdc" | "native",
+            amount: input.amount,
+            to: input.to,
+          });
+          postToGroup("Treasurer", result).catch(() => {});
+        } else if (block.name === "rebalance_treasury") {
+          try {
+            const r = await runTreasurer();
+            result = `Rebalance complete. Total USDC: $${r.totalUsdc}, Lulo Target: $${r.luloTarget}, Lulo Position: $${r.luloPosition}`;
+          } catch (err) {
+            result = `Rebalance failed: ${err instanceof Error ? err.message : "Unknown error"}`;
+          }
+          postToGroup("Treasurer", result).catch(() => {});
+        } else if (block.name === "deposit_to_lulo") {
+          result = await executeLuloDeposit(input.amount);
+          postToGroup("Treasurer", result).catch(() => {});
+        } else if (block.name === "withdraw_from_lulo") {
+          result = await executeLuloWithdraw();
+          postToGroup("Treasurer", result).catch(() => {});
+        } else {
+          result = `Unknown tool: ${block.name}`;
+        }
+
+        toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
+      }
+
+      allMessages.push({ role: "user", content: toolResults });
+
+      response = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: allMessages,
+        tools: TREASURER_TOOLS,
+      });
+    }
+
+    // Extract final text response
+    const textBlocks = response.content.filter((b) => b.type === "text");
+    const reply = textBlocks.length > 0 ? textBlocks.map((b) => b.type === "text" ? b.text : "").join("\n") : "Action completed.";
     addAgentLog("treasurer", `Chat: "${message.slice(0, 60)}..." → responded`);
     return reply;
   } catch (err) {

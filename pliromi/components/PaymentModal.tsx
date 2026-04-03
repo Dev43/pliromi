@@ -143,6 +143,28 @@ export default function PaymentModal({
               </div>
             </div>
 
+            {/* x402 link for agents / CLI */}
+            <div className="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-500">x402 Payment Link</span>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/api/x402/${product.id}`;
+                    navigator.clipboard.writeText(url);
+                  }}
+                  className="text-[10px] text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  Copy
+                </button>
+              </div>
+              <code className="text-[11px] text-gray-600 break-all block">
+                {typeof window !== "undefined" ? window.location.origin : ""}/api/x402/{product.id}
+              </code>
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Use with: <code className="bg-gray-200 px-1 rounded">ows pay request --wallet myWallet &quot;{typeof window !== "undefined" ? window.location.origin : ""}/api/x402/{product.id}&quot;</code>
+              </p>
+            </div>
+
             <button
               onClick={initPayment}
               disabled={loading}

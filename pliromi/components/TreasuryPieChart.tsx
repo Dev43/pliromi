@@ -196,7 +196,15 @@ export default function TreasuryPieChart() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <h2 className="text-lg font-semibold text-gray-900 mb-3">Allocation</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-gray-900">Allocation</h2>
+        <button
+          onClick={() => { setLoading(true); fetchData(); }}
+          className="text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
 
       <div className="flex justify-center mb-4">
         <PieChart slices={slices} />

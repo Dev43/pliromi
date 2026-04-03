@@ -8,6 +8,13 @@ export async function register() {
       } catch (err) {
         console.error("[Instrumentation] Failed to start treasurer:", err);
       }
+
+      try {
+        const { startXmtpListener } = await import("./lib/xmtp-listener");
+        await startXmtpListener();
+      } catch (err) {
+        console.error("[Instrumentation] Failed to start XMTP listener:", err);
+      }
     }, 10000); // Wait 10s for server to be fully ready
   }
 }
